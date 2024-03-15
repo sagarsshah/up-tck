@@ -40,18 +40,39 @@ pub struct UtrasnsportSocket
 {
     //test_v:i32,
     socket: TcpStream,
-    topic_to_listener: Mutex<HashMap< Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>,&'a str)>>,
+    topic_to_listener: HashMap< Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>,&'static [char; 1024])>,
     
        
 }
 impl Clone for UtrasnsportSocket {
-    fn clone(&self) -> Self {
+   fn clone(&self) -> Self {
+    // let __test = self.topic_to_listener.lock();
+        // Clone the inner HashMap
+   // let cloned_map: HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync>, &'static [char; 1024])> = self.topic_to_listener.clone();
+   //let cloned_map = __test.clone();
+
+
+
+   // Populate the original HashMap as needed
+   // For example:
+   // topic_to_listener_map.insert(...);
+   
+   // Create a new HashMap to store the cloned data
+   let mut cloned_map: HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>, &'static [char; 1024])> = HashMap::new();
+   
+   // Iterate over the original HashMap and clone each entry
+   for (key, value) in &self.topic_to_listener {
+       // Since closures can't be cloned directly, you may need to find another way to handle them
+       // For this example, let's assume the closure doesn't need to be cloned
+       cloned_map.insert(key.clone(), value.clone());
+   }
+
         UtrasnsportSocket {
             socket: self.socket.try_clone().expect("Failed to clone TcpStream"),
-            topic_to_listener: Mutex::new(self.topic_to_listener.lock().unwrap().clone()),
             
+            topic_to_listener:cloned_map,
 
-            
+          
         }
     }
 }
@@ -59,22 +80,16 @@ impl Clone for UtrasnsportSocket {
 impl UtrasnsportSocket {
    
     fn new() -> Self { 
-     //let test_v = 32;
+    
      let mut socket:TcpStream = TcpStream::connect(DISPATCHER_ADDR).expect("Failed to connect to dispatcher"); 
      
-     let mut topic_to_listener: Mutex<HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync>, &str)>> =  Mutex::new(HashMap::new());
-     UtrasnsportSocket{socket,topic_to_listener}}
+     let mut _topic_to_listener: HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync>, &'static [char; 1024])> =  HashMap::new();
+     UtrasnsportSocket{socket, topic_to_listener: _topic_to_listener }}
 
     }
 //impl<'a> UtransportExt <'a> for UtrasnsportSocket<'a>{
     impl UtransportExt  for UtrasnsportSocket{
-   //fn new() -> Self { 
-    //let test_v = 32;
-    //let mut socket:TcpStream = TcpStream::connect(DISPATCHER_ADDR)?; 
-    
-    //let mut topic_to_listener: HashMap< Vec<u8>, Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>> =  HashMap::new();
-    //UTrasnsport_Socket{socket,topic_to_listener}}
-
+  
 
 
  fn socket_init(& mut self)
