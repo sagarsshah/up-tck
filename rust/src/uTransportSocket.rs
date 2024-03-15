@@ -1,11 +1,12 @@
 
+use async_std::sync::Mutex;
 use async_trait::async_trait;
 
 use std::net::TcpStream;
 use std::io::{Read, Write};
 use std::collections::HashMap;
 use std::thread;
-
+use protobuf::{Message, MessageDyn};
 //use std::io::*;
 
 
@@ -24,7 +25,7 @@ use up_rust::{
 use crate::constants::DISPATCHER_ADDR;
 use crate::constants::BYTES_MSG_LENGTH;
 
-
+use crate::utils::{base64_to_protobuf_bytes, protobuf_to_base64, send_socket_data,convert_json_to_jsonstring};
 //use uprotocol::utransport::{Utransport, UtransportError};
 trait UtransportExt {
     //topic_to_listener: HashMap< Vec<u8>, Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>>;
@@ -34,25 +35,26 @@ trait UtransportExt {
     fn socket_init(& mut self);
     fn _handle_publish_message(& mut self, umsg: UMessage);
 }
-pub struct UtrasnsportSocket
+pub struct UtrasnsportSocket<'a>
 {
     //test_v:i32,
     socket: TcpStream,
-    topic_to_listener: HashMap< Vec<u8>, Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>>,
+    topic_to_listener: Mutex<HashMap< Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>,&'a str)>>,
+    
        
 }
 
-impl UtrasnsportSocket {
+impl UtrasnsportSocket<'_> {
    
     fn new() -> Self { 
      //let test_v = 32;
      let mut socket:TcpStream = TcpStream::connect(DISPATCHER_ADDR).expect("Failed to connect to dispatcher"); 
      
-     let mut topic_to_listener: HashMap< Vec<u8>, Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>> =  HashMap::new();
+     let mut topic_to_listener: Mutex<HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync>, &str)>> =  Mutex::new(HashMap::new());
      UtrasnsportSocket{socket,topic_to_listener}}
 
     }
-impl UtransportExt for UtrasnsportSocket{
+impl UtransportExt for UtrasnsportSocket<'_>{
    
    //fn new() -> Self { 
     //let test_v = 32;
@@ -115,7 +117,20 @@ impl UtransportExt for UtrasnsportSocket{
             continue;
         }
 
-        let umessage:Result<UMessage,_> = Err(buffer);
+     //   let umessage:Result<UMessage,_> = Err(buffer);
+
+
+     //let protobuf_serialized_data = base64_to_protobuf_bytes(buffer).expect("received data from TM is corrupt"); // Implement this function according to your logic
+
+                    
+     let mut umessage = UMessage::new(); // Assuming UMessage is a protobuf-generated message type
+
+         // Assuming umsg_serialized is the byte array obtained from SerializeToString()
+         if let Err(err) = umessage.merge_from_bytes(&buffer) {
+            eprintln!("Error deserializing UMessage: {}", err);
+         } else {
+            eprint!("data seems to be correct!");                       
+         } 
 
 
      //let mut umessage = UMessage::new(); // Assuming UMessage is a protobuf-generated message type
@@ -152,13 +167,14 @@ impl UtransportExt for UtrasnsportSocket{
     }
 }
 fn _handle_publish_message( & mut self,umsg: UMessage) {
-    let topic_b = umsg.attributes.source;
+    let topic_b = umsg.attributes.source.to_string().as_bytes().to_vec();
 
     if let Some(listeners) = self.topic_to_listener.get(&topic_b) {
         //println!("{} Handle Topic", std::any::type_name::<Self>());
 
         for listener in listeners {
-            listener.on_receive(umsg);
+            let listener_fn = *listener;
+            let listener_fn = listener_fn(umsg);
         }
     } else {
         //println!("{} Topic not found in Listener Map, discarding...", std::any::type_name::<Self>());
@@ -193,14 +209,19 @@ impl UTransport for UtrasnsportSocket{
      
     
     
-        let umsg_serialized = message.to_string();
+        let umsg_serialized = message.to_string().as_bytes().to_vec();
 
-        match self.socket.write_all(&umsg_serialized).await {
+        match self.socket.write_all(&umsg_serialized) {
             Ok(_) => {
                 //info!("{} uMessage Sent", std::any::type_name::<Self>());
-                UStatus {code: up_rust::uprotocol::UCode::OK, message: "OK",details:todo!(),special_fields:todo!() }}
-            
-            Err(_) => UStatus {code:up_rust::uprotocol::UCode::INTERNAL,message:"INTERNAL ERROR: OSError sending UMessage", details: todo!(), special_fields: todo!() } }
+                Err(UStatus {
+                    code: up_rust::uprotocol::UCode::OK.into(),
+                    message: Some("OK".to_string()), // Convert &str to String and wrap it into Some
+                    details: todo!(),
+                    special_fields: todo!(),
+                })
+            }
+            Err(_) => Err(UStatus {code:up_rust::uprotocol::UCode::INTERNAL.into(),message:Some("INTERNAL ERROR: OSError sending UMessage".to_string()), details: todo!(), special_fields: todo!() }) }
         }
         
         
@@ -265,7 +286,13 @@ impl UTransport for UtrasnsportSocket{
             topic_to_listener.insert(topic_serialized, vec![listener]);
         }
     
-        UStatus { code: up_rust::uprotocol::UCode::OK, message: "OK",details:todo!(),special_fields:todo!() }
+        Err(UStatus {
+            code: up_rust::uprotocol::UCode::OK.into(),
+            message: Some("OK".to_string()), // Convert &str to String and wrap it into Some
+            details: todo!(),
+            special_fields: todo!(),
+        })
+        //UStatus { code: up_rust::uprotocol::UCode::OK, message: "OK",details:todo!(),special_fields:todo!() }
     }
 
 
@@ -286,10 +313,10 @@ impl UTransport for UtrasnsportSocket{
     /// Returns an error if the listener could not be unregistered, for example if the given listener does not exist.
     async fn unregister_listener(&self, topic: UUri, listener: &str) -> Result<(), UStatus>
     {
-        let topic_serialized = topic.to_string(); // Assuming SerializeToString returns Result<Vec<u8>, _>
+        let topic_serialized = topic.to_string().as_bytes().to_vec(); // Assuming SerializeToString returns Result<Vec<u8>, _>
 
         if let Some(listeners) = self.topic_to_listener.get_mut(&topic_serialized) {
-            if listeners.len() > 1 {
+            if listeners. > 1 {
                 if let Some(index) = listeners.iter().position(|x| *x == listener) {
                     listeners.remove(index);
                 }
@@ -298,7 +325,13 @@ impl UTransport for UtrasnsportSocket{
             }
         }
     
-          UStatus{code: up_rust::uprotocol::UCode::OK, message: "OK",details:todo!(),special_fields:todo!()} 
+          //Err(UStatus{code: up_rust::uprotocol::UCode::OK.into(), message: "OK",details:todo!(),special_fields:todo!()}) 
+          Err(UStatus {
+            code: up_rust::uprotocol::UCode::OK.into(),
+            message: Some("OK".to_string()), // Convert &str to String and wrap it into Some
+            details: todo!(),
+            special_fields: todo!(),
+        })
         //UStatus { code: up_rust::UCode::OK, message: "OK", details: todo!(), special_fields: todo!() }
     }
 }

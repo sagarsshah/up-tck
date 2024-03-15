@@ -1,9 +1,12 @@
 use std::net::TcpStream;
 use std::io::Read;
+use serde_json::to_string;
+use std::sync::Arc;
 
 use std::collections::HashMap;
 
 use std::thread;
+use base64::Engine;
 use serde::{Serialize, Deserialize};
 use protobuf::{Message, MessageDyn};
 //use up_rust::rpc::RpcMapper;
@@ -11,15 +14,16 @@ use protobuf::{Message, MessageDyn};
 use up_rust::{
   //  transport::validator::Validators,
     rpc::RpcMapper, transport::datamodel::UTransport, uprotocol::{
-        umessage, UCode, UMessage, UStatus 
+        umessage, UCode, UMessage, UStatus, UUri 
     }
    // uri::validator::UriValidator,
 };
 
 
 use crate::uTransportSocket::UtrasnsportSocket;
-use crate::utils::{base64_to_protobuf_bytes, protobuf_to_base64, send_socket_data};
+use crate::utils::{base64_to_protobuf_bytes, protobuf_to_base64, send_socket_data,convert_json_to_jsonstring};
 
+#[derive(Serialize)]
 pub struct JsonData {
     action: String,
     message: String,
@@ -28,12 +32,13 @@ pub struct JsonData {
 //type Listener = Box<dyn Fn(Result<(), UStatus>) + Send + Sync + 'static>;
 
 type Listener = Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>;
+#[derive(Clone)]
 pub struct SocketTestAgent {
     utransport: UtrasnsportSocket,
    // possible_received_protobufs: Vec<UMessage>,
   // listener:Listener,
     clientsocket: TcpStream,
-    listnerString: &str,
+    listner_map: Vec<String>,
 }
 
 impl SocketTestAgent {
@@ -41,13 +46,15 @@ impl SocketTestAgent {
         let clientsocket = test_clientsocket.try_clone().expect("Failed to clone socket");
      //   let possible_received_protobufs = vec![UMessage::default()]; // Modify with appropriate initialization
       //  let listener: Listener = None; 
+       
             
         SocketTestAgent {
             utransport,
-    //        listener,
-       //     possible_received_protobufs,
+    
             clientsocket,
-            listnerString,
+    
+            listner_map: Vec::new(),
+            
             
         }
     }
@@ -64,7 +71,7 @@ impl SocketTestAgent {
 fn on_receive(&self,result:Result<UMessage, UStatus>) {
     println!("Listener onreceived");
 
-
+  
     let mut json_message = JsonData {
         action: "onReceive".to_owned(),
         message: "None".to_string(),
@@ -79,11 +86,15 @@ fn on_receive(&self,result:Result<UMessage, UStatus>) {
   
 }
     
-    fn receive_from_tm(&mut self,clientsocket: TcpStream, utransport: UtrasnsportSocket) {
-        //let testlistner:Listener = Box::new(self.testa);    
-        let listener:Listener = Box::new(move |result| self.on_receive(result));
+    async fn receive_from_tm(&mut self,mut clientsocket: TcpStream, utransport: UtrasnsportSocket) {
+        //let testlistner:Listener = Box::new(self.testa);  
+            // Clone Arc to capture it in the closure
+            let arc_self = Arc::new(self.clone());  
+            let cloned_Arc_self = Arc::clone(&arc_self);
+        let listener:Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_Arc_self.on_receive(result));
 
-
+    //   let listener:Listener = Box::new( arc_self.on_receive(Result<UMessage, UStatus>));
+       
 
 
 
@@ -113,19 +124,29 @@ fn on_receive(&self,result:Result<UMessage, UStatus>) {
                        eprint!("data seems to be correct!");                       
                     } 
 
-                  
+   //let  listener_key =  self.listner_map.get(&umsg.attributes.source.to_string());
                 
                     
              //       let umsg = RpcMapper::unpack_payload(protobuf_serialized_data, UMessage::default()); // Implement RpcMapper and UMessage accordingly
                     let status = match action.as_str() {
-                        //"SEND_COMMAND" => self.utransport.send(umsg),
-                        "REGISTER_LISTENER_COMMAND" => self.utransport.register_listener(Some(umsg.attributes.source.clone()),listener), // Assuming listener can be cloned
-                       // "UNREGISTER_LISTENER_COMMAND" => self.utransport.unregister_listener(Some(umsg.attributes.source.clone()),&(self.listnerString)), // Assuming listener can be cloned
-                        _ => UStatus { code: UCode::OK.into(), message: Some("Unknown action".to_string()), details: todo!(), special_fields: todo!() }, // Modify with appropriate handling
+                        "SEND_COMMAND" => {match self.utransport.send(umsg).await{Ok(_) =>{println!("message sent successfully");()}Err(status)=>{println!("failed to send message");()}}},
+                        "REGISTER_LISTENER_COMMAND" => {
+                            let cloned_listener = Arc::clone(&arc_self);
+                            let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_listener.on_receive(result));
+                            self.utransport.register_listener(umsg.attributes.source.clone().unwrap(),cloned_listener_data);
+                            ()}, // Assuming listener can be cloned
+                       "UNREGISTER_LISTENER_COMMAND" => {self.utransport.unregister_listener(umsg.attributes.source.clone().unwrap(),&self.listner_map[0]);()}, // Assuming listener can be cloned
+                        _ => {||UStatus { code: UCode::OK.into(), message: Some("Unknown action".to_string()), details: todo!(), special_fields: todo!() };}, // Modify with appropriate handling
                     };
+
+
+                  let mut status_clone= status.clone();  
+                 let base64_str  = serde_json::to_string(&status).unwrap();
                     let json_message = JsonData{
                         action:"uStatus".to_owned(),
-                        message: protobuf_to_base64(&status) 
+                        message: base64_str, 
+                        
+                
                     };
                     self.send_to_tm(json_message);
             
@@ -146,7 +167,8 @@ fn on_receive(&self,result:Result<UMessage, UStatus>) {
 
     fn send_to_tm(&self, json_message:JsonData) {
         // Sends JSON data to Test Manager
-        let json_message_str = serde_json::to_string(&json_message).expect("Failed to serialize JSON");
+        let json_message_str = convert_json_to_jsonstring(&json_message);
+        //let json_message_str = serde_json:to_string(&json_message).expect("Failed to serialize JSON");
 
         let message = json_message_str.as_bytes();
 

@@ -27,7 +27,7 @@ use crate::utils::{convert_json_to_jsonstring, convert_str_to_bytes, send_socket
 use serde_json::Value;
 use serde::{Serialize, Deserialize};
 
-
+use std::sync::Arc;
 
 
 
@@ -37,6 +37,7 @@ use serde::{Serialize, Deserialize};
    
 
 fn main() {
+    #[derive(Serialize)]
     struct JsonSdkname {
         sdk_name: String,
         
