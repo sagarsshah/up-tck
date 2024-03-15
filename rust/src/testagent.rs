@@ -32,7 +32,7 @@ pub struct JsonData {
 //type Listener = Box<dyn Fn(Result<(), UStatus>) + Send + Sync + 'static>;
 
 type Listener = Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>;
-#[derive(Clone)]
+//#[derive(Clone)]
 pub struct SocketTestAgent {
     utransport: UtrasnsportSocket,
    // possible_received_protobufs: Vec<UMessage>,
@@ -41,7 +41,21 @@ pub struct SocketTestAgent {
     listner_map: Vec<String>,
 }
 
-impl SocketTestAgent {
+impl Clone for SocketTestAgent {
+    fn clone(&self) -> Self {
+        SocketTestAgent {
+            utransport: self.utransport.clone(), // Assuming UtrasnsportSocket implements Clone
+            clientsocket: self.clientsocket.try_clone().expect("Failed to clone TcpStream"), // Clone TcpStream
+            listner_map: self.listner_map.clone(), // Clone Vec<String>
+        }
+    }
+    
+    fn clone_from(&mut self, source: &Self) {
+        *self = source.clone()
+    }
+}
+
+impl SocketTestAgent  {
    pub fn new(test_clientsocket: TcpStream, utransport: UtrasnsportSocket) -> Self {
         let clientsocket = test_clientsocket.try_clone().expect("Failed to clone socket");
      //   let possible_received_protobufs = vec![UMessage::default()]; // Modify with appropriate initialization
@@ -87,11 +101,12 @@ fn on_receive(&self,result:Result<UMessage, UStatus>) {
 }
     
     async fn receive_from_tm(&mut self,mut clientsocket: TcpStream, utransport: UtrasnsportSocket) {
+       
         //let testlistner:Listener = Box::new(self.testa);  
             // Clone Arc to capture it in the closure
             let arc_self = Arc::new(self.clone());  
             let cloned_Arc_self = Arc::clone(&arc_self);
-        let listener:Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_Arc_self.on_receive(result));
+       // let listener:Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_Arc_self.on_receive(result));
 
     //   let listener:Listener = Box::new( arc_self.on_receive(Result<UMessage, UStatus>));
        
@@ -124,15 +139,15 @@ fn on_receive(&self,result:Result<UMessage, UStatus>) {
                        eprint!("data seems to be correct!");                       
                     } 
 
-   //let  listener_key =  self.listner_map.get(&umsg.attributes.source.to_string());
-                
-                    
-             //       let umsg = RpcMapper::unpack_payload(protobuf_serialized_data, UMessage::default()); // Implement RpcMapper and UMessage accordingly
+   
                     let status = match action.as_str() {
                         "SEND_COMMAND" => {match self.utransport.send(umsg).await{Ok(_) =>{println!("message sent successfully");()}Err(status)=>{println!("failed to send message");()}}},
                         "REGISTER_LISTENER_COMMAND" => {
                             let cloned_listener = Arc::clone(&arc_self);
+                          //  let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_listener.on_receive(result));
+
                             let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_listener.on_receive(result));
+                            //self.utransport.register_listener(umsg.attributes.source.clone().unwrap(),cloned_listener_data);
                             self.utransport.register_listener(umsg.attributes.source.clone().unwrap(),cloned_listener_data);
                             ()}, // Assuming listener can be cloned
                        "UNREGISTER_LISTENER_COMMAND" => {self.utransport.unregister_listener(umsg.attributes.source.clone().unwrap(),&self.listner_map[0]);()}, // Assuming listener can be cloned

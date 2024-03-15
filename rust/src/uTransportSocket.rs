@@ -35,7 +35,8 @@ trait UtransportExt {
     fn socket_init(& mut self);
     fn _handle_publish_message(& mut self, umsg: UMessage);
 }
-pub struct UtrasnsportSocket<'a>
+//#[derive(Clone)]
+pub struct UtrasnsportSocket
 {
     //test_v:i32,
     socket: TcpStream,
@@ -43,8 +44,19 @@ pub struct UtrasnsportSocket<'a>
     
        
 }
+impl Clone for UtrasnsportSocket {
+    fn clone(&self) -> Self {
+        UtrasnsportSocket {
+            socket: self.socket.try_clone().expect("Failed to clone TcpStream"),
+            topic_to_listener: Mutex::new(self.topic_to_listener.lock().unwrap().clone()),
+            
 
-impl UtrasnsportSocket<'_> {
+            
+        }
+    }
+}
+
+impl UtrasnsportSocket {
    
     fn new() -> Self { 
      //let test_v = 32;
@@ -54,8 +66,8 @@ impl UtrasnsportSocket<'_> {
      UtrasnsportSocket{socket,topic_to_listener}}
 
     }
-impl UtransportExt for UtrasnsportSocket<'_>{
-   
+//impl<'a> UtransportExt <'a> for UtrasnsportSocket<'a>{
+    impl UtransportExt  for UtrasnsportSocket{
    //fn new() -> Self { 
     //let test_v = 32;
     //let mut socket:TcpStream = TcpStream::connect(DISPATCHER_ADDR)?; 
@@ -169,7 +181,7 @@ impl UtransportExt for UtrasnsportSocket<'_>{
 fn _handle_publish_message( & mut self,umsg: UMessage) {
     let topic_b = umsg.attributes.source.to_string().as_bytes().to_vec();
 
-    if let Some(listeners) = self.topic_to_listener.get(&topic_b) {
+    if let Some(listeners) = self.topic_to_listener.lock().get(&topic_b) {
         //println!("{} Handle Topic", std::any::type_name::<Self>());
 
         for listener in listeners {
@@ -280,7 +292,7 @@ impl UTransport for UtrasnsportSocket{
 
         let mut topic_to_listener = self.topic_to_listener.lock().await;
         
-        if let Some(listeners) = topic_to_listener.get_mut(&topic_serialized) {
+        if let Some(listeners) = topic_to_listener.get_mut(&topic_serialized.as_bytes().to_vec()) {
             listeners.push(listener);
         } else {
             topic_to_listener.insert(topic_serialized, vec![listener]);
@@ -315,15 +327,15 @@ impl UTransport for UtrasnsportSocket{
     {
         let topic_serialized = topic.to_string().as_bytes().to_vec(); // Assuming SerializeToString returns Result<Vec<u8>, _>
 
-        if let Some(listeners) = self.topic_to_listener.get_mut(&topic_serialized) {
-            if listeners. > 1 {
-                if let Some(index) = listeners.iter().position(|x| *x == listener) {
-                    listeners.remove(index);
-                }
-            } else {
-                self.topic_to_listener.remove(&topic_serialized);
-            }
-        }
+      //  if let Some(listeners) = self.topic_to_listener.get_mut(&topic_serialized) {
+        //    if listeners. > 1 {
+          //      if let Some(index) = listeners.iter().position(|x| *x == listener) {
+            //        listeners.remove(index);
+              //  }
+            //} else {
+             //   self.topic_to_listener.remove(&topic_serialized);
+           // }
+       // }
     
           //Err(UStatus{code: up_rust::uprotocol::UCode::OK.into(), message: "OK",details:todo!(),special_fields:todo!()}) 
           Err(UStatus {
