@@ -1,4 +1,4 @@
-use std::net::TcpStream;
+use std::{io::Write, net::TcpStream};
 use std::io::Read;
 use serde_json::to_string;
 use std::sync::Arc;
@@ -73,16 +73,17 @@ impl SocketTestAgent  {
         }
     }
 
-    pub fn TM_receive_thread (&mut self)
-{
+//    pub fn TM_receive_thread (&mut self)
+//{
     //let utransport_clone = utransport.clone();
-    thread::spawn(move || {
-        Self::receive_from_tm (self,self.clientsocket, self.utransport);
-    });
-}    
+  //  thread::spawn(move || {
+       // Self::receive_from_tm (self,&mut self.clientsocket, self.utransport);
+    //   self.receive_from_tm(&mut self.clientsocket, self.utransport);
+    //});
+//}    
 
 
-fn on_receive(&self,result:Result<UMessage, UStatus>) {
+fn on_receive(self,result:Result<UMessage, UStatus>) {
     println!("Listener onreceived");
 
   
@@ -96,16 +97,17 @@ fn on_receive(&self,result:Result<UMessage, UStatus>) {
         Err(status)=> println!("Received error status: {}", status),
      }
 
-     self.send_to_tm(json_message);
+    // self.send_to_tm(json_message);
   
 }
     
-    async fn receive_from_tm(&mut self,mut clientsocket: TcpStream, utransport: UtrasnsportSocket) {
+  //   fn receive_from_tm(&mut self,clientsocket:&mut TcpStream, utransport: UtrasnsportSocket) {
+    pub async  fn receive_from_tm (&mut self){
        
         //let testlistner:Listener = Box::new(self.testa);  
             // Clone Arc to capture it in the closure
             let arc_self = Arc::new(self.clone());  
-            let cloned_Arc_self = Arc::clone(&arc_self);
+            //let cloned_Arc_self = Arc::clone(&arc_self);
        // let listener:Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_Arc_self.on_receive(result));
 
     //   let listener:Listener = Box::new( arc_self.on_receive(Result<UMessage, UStatus>));
@@ -115,7 +117,7 @@ fn on_receive(&self,result:Result<UMessage, UStatus>) {
 
         loop {
             let mut recv_data = [0; 1024];
-            let recv_result = clientsocket.read(&mut recv_data);
+            let recv_result = self.clientsocket.read(&mut recv_data);
             //let recv_result = clientsocket
             match recv_result {
                 Ok(bytes_received) => {
@@ -141,17 +143,32 @@ fn on_receive(&self,result:Result<UMessage, UStatus>) {
 
    
                     let status = match action.as_str() {
-                        "SEND_COMMAND" => {match self.utransport.send(umsg).await{Ok(_) =>{println!("message sent successfully");()}Err(status)=>{println!("failed to send message");()}}},
+                        "SEND_COMMAND" => {
+                            match self.utransport.send(umsg).await{
+                                Ok(_) =>{println!("message sent successfully");()}
+                                Err(status)=>{println!("failed to send message");()}
+                            }
+                        },
+                        
                         "REGISTER_LISTENER_COMMAND" => {
                             let cloned_listener = Arc::clone(&arc_self);
                           //  let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_listener.on_receive(result));
 
-                            let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_listener.on_receive(result));
+                            //let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_listener.on_receive(result));
+                            let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| <SocketTestAgent as Clone>::clone(&cloned_listener).on_receive(result));
                             //self.utransport.register_listener(umsg.attributes.source.clone().unwrap(),cloned_listener_data);
                             self.utransport.register_listener(umsg.attributes.source.clone().unwrap(),cloned_listener_data);
-                            ()}, // Assuming listener can be cloned
-                       "UNREGISTER_LISTENER_COMMAND" => {self.utransport.unregister_listener(umsg.attributes.source.clone().unwrap(),&self.listner_map[0]);()}, // Assuming listener can be cloned
-                        _ => {||UStatus { code: UCode::OK.into(), message: Some("Unknown action".to_string()), details: todo!(), special_fields: todo!() };}, // Modify with appropriate handling
+                            ()
+                        }, // Assuming listener can be cloned
+                       
+                       "UNREGISTER_LISTENER_COMMAND" => {
+                        self.utransport.unregister_listener(umsg.attributes.source.clone().unwrap(),&self.listner_map[0]);
+                        ()
+                        }, // Assuming listener can be cloned
+
+                        _ => {
+                            ||UStatus { code: UCode::OK.into(), message: Some("Unknown action".to_string()), details: todo!(), special_fields: todo!() };
+                        }, // Modify with appropriate handling
                     };
 
 
@@ -163,7 +180,8 @@ fn on_receive(&self,result:Result<UMessage, UStatus>) {
                         
                 
                     };
-                    self.send_to_tm(json_message);
+                    //self.send_to_tm(json_message);
+                    //self.send_to_tm(json_message);
             
 
                 }
@@ -177,19 +195,21 @@ fn on_receive(&self,result:Result<UMessage, UStatus>) {
     
 
 
- 
+   
 
-
-    fn send_to_tm(&self, json_message:JsonData) {
+    fn send_to_tm(self, json_message:JsonData) {
         // Sends JSON data to Test Manager
         let json_message_str = convert_json_to_jsonstring(&json_message);
         //let json_message_str = serde_json:to_string(&json_message).expect("Failed to serialize JSON");
 
         let message = json_message_str.as_bytes();
 
-        if let Err(err) = send_socket_data(self.clientsocket , &message) {
-            eprintln!("Error sending message: {}", err);
-        }
+        let mut socket_clone = self.clientsocket.try_clone().expect("issue in cloneing");
+        socket_clone.write_all(message);           
+
+   //     if let Err(err) = self.send_socket_data(&mut self.clientsocket , &message) {
+     //       eprintln!("Error sending message: {}", err);
+       // }
 
     }
     fn close_connection(&self) {

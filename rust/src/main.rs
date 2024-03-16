@@ -42,18 +42,20 @@ fn main() {
         sdk_name: String,
         
     }
-    let transport:UtrasnsportSocket;
-    let test_agent_socket = TcpStream::connect(TEST_MANAGER_ADDR).expect("Failed to connect to Test Manager");
-    let mut agent = SocketTestAgent::new(test_agent_socket,transport);
-    agent.TM_receive_thread();
+    let transport= UtrasnsportSocket::new();
+    let mut test_agent_socket = TcpStream::connect(TEST_MANAGER_ADDR).expect("Failed to connect to Test Manager");
+  
     let json_sdk_name = JsonSdkname{sdk_name: String::from("Python"),};
     //let serde_value:Value = serde_json::to_value(&json_sdk_name).unwrap();
 
     let json_message_str = convert_json_to_jsonstring(&json_sdk_name);
     let message = convert_str_to_bytes(&json_message_str);
     println!("Sending SDK name to Test Manager Directly!");
-        if let Err(err) = send_socket_data(test_agent_socket, &message) {
+        if let Err(err) = send_socket_data(&mut test_agent_socket, &message) {
             eprintln!("Error sending message: {}", err);
         }
+
+        let mut agent = SocketTestAgent::new(test_agent_socket,transport);
+        agent.receive_from_tm();
 
 }

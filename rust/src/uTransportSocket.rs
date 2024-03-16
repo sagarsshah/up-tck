@@ -26,21 +26,40 @@ use crate::constants::DISPATCHER_ADDR;
 use crate::constants::BYTES_MSG_LENGTH;
 
 use crate::utils::{base64_to_protobuf_bytes, protobuf_to_base64, send_socket_data,convert_json_to_jsonstring};
-//use uprotocol::utransport::{Utransport, UtransportError};
+
+use once_cell::sync::Lazy;
+
+
+
+type Callback = Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>;
+
+struct Listener {
+    callback: Callback,
+    data: &'static [char; 1024],
+}
+
+// Define your global HashMap
+static GLOBAL_MAP: Lazy<HashMap<Vec<u8>, Listener>> = Lazy::new(|| {
+    let mut map = HashMap::new();
+    // Populate your map here if needed
+    map
+});
+
+
 trait UtransportExt {
-    //topic_to_listener: HashMap< Vec<u8>, Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>>;
   
-    //fn new()->Self;
-    fn __listen(& mut self);
+  //  fn __listen(& mut self);
     fn socket_init(& mut self);
     fn _handle_publish_message(& mut self, umsg: UMessage);
 }
+
+
 //#[derive(Clone)]
 pub struct UtrasnsportSocket
 {
-    //test_v:i32,
+    
     socket: TcpStream,
-    topic_to_listener: HashMap< Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>,&'static [char; 1024])>,
+    //topic_to_listener: HashMap< Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>,&'static [char; 1024])>,
     
        
 }
@@ -58,19 +77,19 @@ impl Clone for UtrasnsportSocket {
    // topic_to_listener_map.insert(...);
    
    // Create a new HashMap to store the cloned data
-   let mut cloned_map: HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>, &'static [char; 1024])> = HashMap::new();
+   //let mut cloned_map: HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>, &'static [char; 1024])> = HashMap::new();
    
    // Iterate over the original HashMap and clone each entry
-   for (key, value) in &self.topic_to_listener {
+   //for (key, value) in &self.topic_to_listener {
        // Since closures can't be cloned directly, you may need to find another way to handle them
        // For this example, let's assume the closure doesn't need to be cloned
-       cloned_map.insert(key.clone(), value.clone());
-   }
+     //  cloned_map.insert(key.clone(), value.clone());
+   //}
 
         UtrasnsportSocket {
             socket: self.socket.try_clone().expect("Failed to clone TcpStream"),
             
-            topic_to_listener:cloned_map,
+          //  topic_to_listener:cloned_map,
 
           
         }
@@ -79,21 +98,23 @@ impl Clone for UtrasnsportSocket {
 
 impl UtrasnsportSocket {
    
-    fn new() -> Self { 
+   pub fn new() -> Self { 
     
      let mut socket:TcpStream = TcpStream::connect(DISPATCHER_ADDR).expect("Failed to connect to dispatcher"); 
      
-     let mut _topic_to_listener: HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync>, &'static [char; 1024])> =  HashMap::new();
-     UtrasnsportSocket{socket, topic_to_listener: _topic_to_listener }}
+    // let mut _topic_to_listener: HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync>, &'static [char; 1024])> =  HashMap::new();
+     //UtrasnsportSocket{socket, topic_to_listener: _topic_to_listener }}
+     UtrasnsportSocket{socket }
 
     }
+}
 //impl<'a> UtransportExt <'a> for UtrasnsportSocket<'a>{
     impl UtransportExt  for UtrasnsportSocket{
   
 
 
- fn socket_init(& mut self)
- {
+ //fn socket_init(& mut self)
+// {
       // Define the address of the dispatcher
      // let dispatcher_addr = DISPATCHER_ADDR.parse::<SocketAddr>()?;
 
@@ -111,17 +132,17 @@ impl UtrasnsportSocket {
 
 
 
-    let thread_handle = thread::spawn(|| {
+    //let thread_handle = thread::spawn(|| {
         // Call the __listen function
-        self.__listen();
-    });
+      //  self.__listen();
+    //});
 
     // Wait for the thread to finish
-    let _ = thread_handle.join();
- }
+  //  let _ = thread_handle.join();
+ //}
 
- 
- fn __listen(& mut self) {
+ fn socket_init(& mut self){
+//fn __listen(& mut self) {
     // Implementation of the __listen function goes here
     // This function should include the logic of listening for responses
 
@@ -196,17 +217,32 @@ impl UtrasnsportSocket {
 fn _handle_publish_message( & mut self,umsg: UMessage) {
     let topic_b = umsg.attributes.source.to_string().as_bytes().to_vec();
 
-    if let Some(listeners) = self.topic_to_listener.lock().get(&topic_b) {
+
+
+    if let Some(listeners) = GLOBAL_MAP.get(&topic_b) {
+    //if let Some(listeners) = self.topic_to_listener.lock().get(&topic_b) {
         //println!("{} Handle Topic", std::any::type_name::<Self>());
 
-        for listener in listeners {
-            let listener_fn = *listener;
-            let listener_fn = listener_fn(umsg);
-        }
+        (listeners.callback)(Ok(umsg.clone()));
+            //for listeners in listeners.iter() {
+              //  let (callback, characters) = listener;
+                // Now you can use callback and characters
+                // Assuming umsg is an instance of UMessage
+                //(callback)(Ok(umsg.clone())); // Call the callback with the message
+            //}
+        
+
+
+        //for listener in listeners {
+          //  let listener_fn = *listener;
+           // let listener_fn = listener_fn(umsg);
+        //}
     } else {
         //println!("{} Topic not found in Listener Map, discarding...", std::any::type_name::<Self>());
     }
 }
+
+
 }
 
 #[async_trait]
@@ -237,8 +273,11 @@ impl UTransport for UtrasnsportSocket{
     
     
         let umsg_serialized = message.to_string().as_bytes().to_vec();
+        let mut socket_clone = self.socket.try_clone().expect("issue in cloneing");
+       // socket_clone.write_all(message);         
 
-        match self.socket.write_all(&umsg_serialized) {
+
+        match socket_clone.write_all(&umsg_serialized) {
             Ok(_) => {
                 //info!("{} uMessage Sent", std::any::type_name::<Self>());
                 Err(UStatus {
@@ -303,15 +342,19 @@ impl UTransport for UtrasnsportSocket{
     ) -> Result<String, UStatus>
     {
 
-        let topic_serialized = topic.to_string();
+        let topic_serialized = topic.to_string().into_bytes();
 
-        let mut topic_to_listener = self.topic_to_listener.lock().await;
-        
-        if let Some(listeners) = topic_to_listener.get_mut(&topic_serialized.as_bytes().to_vec()) {
-            listeners.push(listener);
-        } else {
-            topic_to_listener.insert(topic_serialized, vec![listener]);
-        }
+        //let mut topic_to_listener = self.topic_to_listener.lock().await;
+       // let mut topic_to_listener = GLOBAL_MAP;
+        let _listener= Listener{ callback:todo!(), data:todo!()};
+        GLOBAL_MAP.insert(topic_serialized, _listener);
+
+
+        //if let Some(listeners) = topic_to_listener.get_mut(&topic_serialized.as_bytes().to_vec()) {
+          //  listener.p;
+        //} else {
+          //  topic_to_listener.insert(topic_serialized, vec![listener]);
+       // }
     
         Err(UStatus {
             code: up_rust::uprotocol::UCode::OK.into(),

@@ -12,12 +12,12 @@ use std::net::TcpStream;
 //use uprotocol::logger::logger;
 //use uprotocol::utils::constants::BYTES_MSG_LENGTH;
 
-pub fn send_socket_data(mut stream: TcpStream, msg: &[u8]) -> std::io::Result<()> {
+pub fn send_socket_data(stream:&mut TcpStream, msg: &[u8]) -> std::io::Result<()> {
     stream.write_all(msg)?;
     Ok(())
 }
 
-pub fn receive_socket_data(mut stream: TcpStream) -> std::io::Result<Vec<u8>> {
+pub fn receive_socket_data(stream:&mut TcpStream) -> std::io::Result<Vec<u8>> {
     let mut buffer = vec![0; BYTES_MSG_LENGTH];
     stream.read_exact(&mut buffer)?;
     Ok(buffer)
@@ -84,9 +84,9 @@ mod tests {
 
         // Spawn a thread to accept incoming connections
         std::thread::spawn(move || {
-            let (stream, _) = listener.accept().expect("Failed to accept connection");
+            let (mut stream, _) = listener.accept().expect("Failed to accept connection");
             let mut received_data = vec![0; 10];
-            receive_socket_data(stream).unwrap().copy_from_slice(&mut received_data);
+            receive_socket_data(&mut stream).unwrap().copy_from_slice(&mut received_data);
             assert_eq!(received_data, b"HelloWorld");
         });
 
@@ -94,7 +94,7 @@ mod tests {
         let mut stream = TcpStream::connect(addr).expect("Failed to connect to server");
 
         // Send data
-        send_socket_data(stream, b"HelloWorld").unwrap();
+        send_socket_data(&mut stream, b"HelloWorld").unwrap();
     }
 
    
