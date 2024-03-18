@@ -1,14 +1,18 @@
 
-use async_std::sync::Mutex;
+use async_std::io;
+
 use async_trait::async_trait;
+use chrono::serde::ts_seconds_option;
 
-use std::net::TcpStream;
-use std::io::{Read, Write};
-use std::collections::HashMap;
-use std::thread;
+use std::net::TcpStream as TcpStreamSync;
+use std::{clone, io::{Read, Write}, /*net::TcpStream,*/ thread};
 use protobuf::{Message, MessageDyn};
-//use std::io::*;
+use tokio::net::TcpStream;
+use tokio::io::{AsyncReadExt,AsyncWriteExt};
 
+use std::{
+    collections::HashMap,/*  net::TcpStream,*/ sync::{atomic::AtomicU64, Arc,Mutex}, time::Duration
+};
 
 use up_rust::{
     transport::{datamodel::UTransport, validator::Validators},
@@ -19,139 +23,88 @@ use up_rust::{
 };
 
 
-
-
-
 use crate::constants::DISPATCHER_ADDR;
 use crate::constants::BYTES_MSG_LENGTH;
-
 use crate::utils::{base64_to_protobuf_bytes, protobuf_to_base64, send_socket_data,convert_json_to_jsonstring};
-
 use once_cell::sync::Lazy;
 
+pub type UtransportListener = Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>;
 
 
-type Callback = Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>;
-
-struct Listener {
-    callback: Callback,
-    data: &'static [char; 1024],
-}
-
-// Define your global HashMap
-static GLOBAL_MAP: Lazy<HashMap<Vec<u8>, Listener>> = Lazy::new(|| {
-    let mut map = HashMap::new();
-    // Populate your map here if needed
-    map
-});
-
-
-trait UtransportExt {
+pub trait UtransportExt {
   
   //  fn __listen(& mut self);
-    fn socket_init(& mut self);
+    //fn transport_init(& mut self);
+    async fn socket_init(& mut self);
     fn _handle_publish_message(& mut self, umsg: UMessage);
+    async fn read_socket(&mut self, buffer: &mut [u8]) -> io::Result<usize>;
 }
 
 
-//#[derive(Clone)]
+
 pub struct UtrasnsportSocket
 {
     
-    socket: TcpStream,
-    //topic_to_listener: HashMap< Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>,&'static [char; 1024])>,
-    
+    socket: Arc<Mutex<TcpStream>>, //TcpStream,
+    socket_sync: TcpStreamSync,
+    listner_map: Arc<Mutex<HashMap<String, Vec<Arc<UtransportListener>>>>>,
        
 }
 impl Clone for UtrasnsportSocket {
    fn clone(&self) -> Self {
-    // let __test = self.topic_to_listener.lock();
-        // Clone the inner HashMap
-   // let cloned_map: HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync>, &'static [char; 1024])> = self.topic_to_listener.clone();
-   //let cloned_map = __test.clone();
-
-
-
-   // Populate the original HashMap as needed
-   // For example:
-   // topic_to_listener_map.insert(...);
-   
-   // Create a new HashMap to store the cloned data
-   //let mut cloned_map: HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>, &'static [char; 1024])> = HashMap::new();
-   
-   // Iterate over the original HashMap and clone each entry
-   //for (key, value) in &self.topic_to_listener {
-       // Since closures can't be cloned directly, you may need to find another way to handle them
-       // For this example, let's assume the closure doesn't need to be cloned
-     //  cloned_map.insert(key.clone(), value.clone());
-   //}
+  
 
         UtrasnsportSocket {
-            socket: self.socket.try_clone().expect("Failed to clone TcpStream"),
+            //socket: self.socket.try_clone().expect("problem cloning dispatcher"),
+            socket: self.socket.clone(),
+            socket_sync:self.socket_sync.try_clone().expect("issue in cloning sync socket"),
+            listner_map: self.listner_map.clone(),
             
-          //  topic_to_listener:cloned_map,
-
-          
+            
         }
     }
 }
 
 impl UtrasnsportSocket {
    
-   pub fn new() -> Self { 
+  pub async fn new() -> Self { 
     
-     let mut socket:TcpStream = TcpStream::connect(DISPATCHER_ADDR).expect("Failed to connect to dispatcher"); 
-     
-    // let mut _topic_to_listener: HashMap<Vec<u8>, (Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync>, &'static [char; 1024])> =  HashMap::new();
-     //UtrasnsportSocket{socket, topic_to_listener: _topic_to_listener }}
-     UtrasnsportSocket{socket }
+    let mut socket_connecton =TcpStream::connect(DISPATCHER_ADDR).await.unwrap();
+    let mut socket_sync: TcpStreamSync= TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
+  //  let mut socket_sync:TcpStreamSync = TcpStreamSync::new(socket_connection_sync);
+    let mut socket= Arc::new(Mutex::new(socket_connecton));
+    
+     //let mut socket:TcpStream = TcpStream::connect(DISPATCHER_ADDR).await.expect("problem opening dispatcher socket"); 
+     UtrasnsportSocket{socket,socket_sync, listner_map: Arc::new(Mutex::new(HashMap::new())), }
 
     }
 }
-//impl<'a> UtransportExt <'a> for UtrasnsportSocket<'a>{
+
+
     impl UtransportExt  for UtrasnsportSocket{
   
 
 
- //fn socket_init(& mut self)
-// {
-      // Define the address of the dispatcher
-     // let dispatcher_addr = DISPATCHER_ADDR.parse::<SocketAddr>()?;
+/*    fn transport_init(& mut self) {
+    let transport = Arc::new(Mutex::new(self));
+    let cloned_transport = Arc::clone(&transport);
 
-      // Create a TCP socket and connect to the dispatcher
-      //let mut
        
-      //self.socket = TcpStream::connect(DISPATCHER_ADDR);
-
-      // Create a HashMap to store reqid_to_future mapping.
-   // let mut reqid_to_future: HashMap<Bytes, Future> = HashMap::new();
-
-    // Create a HashMap to store topic_to_listener mapping.
-    //let mut topic_to_listener: HashMap<Bytes, Vec<listner>> = HashMap::new();
-   // let mut topic_to_listener: HashMap< Vec<u8>, Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>> =  HashMap::new();
-
-
-
-    //let thread_handle = thread::spawn(|| {
-        // Call the __listen function
-      //  self.__listen();
-    //});
-
-    // Wait for the thread to finish
-  //  let _ = thread_handle.join();
- //}
-
- fn socket_init(& mut self){
-//fn __listen(& mut self) {
-    // Implementation of the __listen function goes here
-    // This function should include the logic of listening for responses
+    let handle = thread::spawn(move || {
+        let mut inner_transport = cloned_transport.lock().unwrap();
+        inner_transport.socket_init();
+    });
+     // Wait for the thread to finish
+     handle.join().unwrap();
+   }   */  
+  async fn socket_init(& mut self){
 
 
     loop {
         // Receive data from the socket
         let mut buffer: [u8; BYTES_MSG_LENGTH] = [0; BYTES_MSG_LENGTH];
        
-        let bytes_read = match self.socket.read(&mut buffer) {
+        let bytes_read = match self.read_socket(&mut buffer).await {
             Ok(bytes_read) => bytes_read,
             Err(e) => {
                 // Handle socket errors (e.g., connection closed)
@@ -165,15 +118,11 @@ impl UtrasnsportSocket {
             continue;
         }
 
-     //   let umessage:Result<UMessage,_> = Err(buffer);
-
-
-     //let protobuf_serialized_data = base64_to_protobuf_bytes(buffer).expect("received data from TM is corrupt"); // Implement this function according to your logic
 
                     
      let mut umessage = UMessage::new(); // Assuming UMessage is a protobuf-generated message type
 
-         // Assuming umsg_serialized is the byte array obtained from SerializeToString()
+
          if let Err(err) = umessage.merge_from_bytes(&buffer) {
             eprintln!("Error deserializing UMessage: {}", err);
          } else {
@@ -181,21 +130,6 @@ impl UtrasnsportSocket {
          } 
 
 
-     //let mut umessage = UMessage::new(); // Assuming UMessage is a protobuf-generated message type
-
-     // Assuming umsg_serialized is the byte array obtained from SerializeToString()
-     //if let Err(err) = umessage.merge_from_bytes(&buffer) {
-       //  eprintln!("Error deserializing UMessage: {}", err);
-     //} else {
-       //  umessage.attributes;
-        
-     //}
-    // let type_value:UMessageType = umessage.attributes.type_.;
-
-            
-
-       
-        // Assuming you have UAttributes and UMessageType defined elsewhere
         
         
         match umessage.attributes.type_.enum_value()  {
@@ -214,31 +148,24 @@ impl UtrasnsportSocket {
         
     }
 }
+
+
+async fn read_socket(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+    let mut socket = self.socket.lock().expect("error access dispatcher socket connection");
+    socket.read(buffer).await
+
+}
+
 fn _handle_publish_message( & mut self,umsg: UMessage) {
     let topic_b = umsg.attributes.source.to_string().as_bytes().to_vec();
 
 
 
-    if let Some(listeners) = GLOBAL_MAP.get(&topic_b) {
-    //if let Some(listeners) = self.topic_to_listener.lock().get(&topic_b) {
-        //println!("{} Handle Topic", std::any::type_name::<Self>());
+    if let Some(tests) = self.listner_map.lock().unwrap().get(&umsg.attributes.source.to_string()) {
+        for listner in tests{
+            listner(Ok(umsg.clone()));
+        }
 
-        (listeners.callback)(Ok(umsg.clone()));
-            //for listeners in listeners.iter() {
-              //  let (callback, characters) = listener;
-                // Now you can use callback and characters
-                // Assuming umsg is an instance of UMessage
-                //(callback)(Ok(umsg.clone())); // Call the callback with the message
-            //}
-        
-
-
-        //for listener in listeners {
-          //  let listener_fn = *listener;
-           // let listener_fn = listener_fn(umsg);
-        //}
-    } else {
-        //println!("{} Topic not found in Listener Map, discarding...", std::any::type_name::<Self>());
     }
 }
 
@@ -268,27 +195,106 @@ impl UTransport for UtrasnsportSocket{
     /// Returns an error if the message could not be sent.
     async fn send(&self, message: UMessage) -> Result<(), UStatus>
     {
+            
+       
+        let mut socket_clone = self.socket_sync.try_clone().expect("dispatcher socket connection cloning failed");
+       
+        let umsg_serialized = message.to_string().as_bytes().to_vec().clone();
+        // Acquire the lock on the mutex to access the TcpStream
+        // Perform the write operation on the TcpStream
+           let payload = *message.payload.0.ok_or(UStatus::fail_with_code(
+            UCode::INVALID_ARGUMENT,
+            "Invalid uPayload",
+        ).clone())?;
+        let attributes = *message.attributes.0.ok_or(UStatus::fail_with_code(
+            UCode::INVALID_ARGUMENT,
+            "Invalid uAttributes",
+        ).clone())?;
+       
+      // Check the type of UAttributes (Publish / Request / Response)
+        match attributes
+            .type_
+            .enum_value()
+            .map_err(|_| UStatus::fail_with_code(UCode::INTERNAL, "Unable to parse type"))?
+        {
+            UMessageType::UMESSAGE_TYPE_PUBLISH => {
+                Validators::Publish
+                    .validator()
+                    .validate(&attributes)
+                    .map_err(|e| {
+                        UStatus::fail_with_code(
+                            UCode::INVALID_ARGUMENT,
+                            format!("Wrong Publish UAttributes {e:?}"),
+                        )
+                    })?;
 
-     
-    
-    
-        let umsg_serialized = message.to_string().as_bytes().to_vec();
-        let mut socket_clone = self.socket.try_clone().expect("issue in cloneing");
-       // socket_clone.write_all(message);         
-
-
-        match socket_clone.write_all(&umsg_serialized) {
-            Ok(_) => {
-                //info!("{} uMessage Sent", std::any::type_name::<Self>());
-                Err(UStatus {
-                    code: up_rust::uprotocol::UCode::OK.into(),
-                    message: Some("OK".to_string()), // Convert &str to String and wrap it into Some
-                    details: todo!(),
-                    special_fields: todo!(),
-                })
+                     match socket_clone.write_all(&umsg_serialized) {
+                        
+                        Ok(_) => {
+                       
+                            Err(UStatus::ok())
+                        }
+                        Err(_) => Err(UStatus::fail_with_code(
+                            UCode::UNAVAILABLE,
+                            "Dispatcher communication issue",
+                        ))
+                    }    
+              
             }
-            Err(_) => Err(UStatus {code:up_rust::uprotocol::UCode::INTERNAL.into(),message:Some("INTERNAL ERROR: OSError sending UMessage".to_string()), details: todo!(), special_fields: todo!() }) }
+            UMessageType::UMESSAGE_TYPE_REQUEST => {
+                Validators::Request
+                    .validator()
+                    .validate(&attributes)
+                    .map_err(|e| {
+                        UStatus::fail_with_code(
+                            UCode::INVALID_ARGUMENT,
+                            format!("Wrong Request UAttributes {e:?}"),
+                        )
+                    })?;
+                    match socket_clone.write_all(&umsg_serialized) {
+                        
+                                          
+                        
+                        Ok(_) => {
+                       
+                            Err(UStatus::ok())
+                        }
+                        Err(_) => Err(UStatus::fail_with_code(
+                            UCode::UNAVAILABLE,
+                            "Dispatcher communication issue",
+                        ))
+                    }    
+
+            }
+            UMessageType::UMESSAGE_TYPE_RESPONSE => {
+                Validators::Response
+                    .validator()
+                    .validate(&attributes)
+                    .map_err(|e| {
+                        UStatus::fail_with_code(
+                            UCode::INVALID_ARGUMENT,
+                            format!("Wrong Response UAttributes {e:?}"),
+                        )
+                    })?;
+                    match socket_clone.write_all(&umsg_serialized){
+
+                        Ok(_) => {
+                       
+                            Err(UStatus::ok())
+                        }
+                        Err(_) => Err(UStatus::fail_with_code(
+                            UCode::UNAVAILABLE,
+                            "Dispatcher communication issue",
+                        ))
+                    }    
+
+            }
+            UMessageType::UMESSAGE_TYPE_UNSPECIFIED => Err(UStatus::fail_with_code(
+                UCode::INVALID_ARGUMENT,
+                "Wrong Message type in UAttributes",
+            )),
         }
+    }
         
         
        
@@ -307,17 +313,10 @@ impl UTransport for UtrasnsportSocket{
     async fn receive(&self, topic: UUri) -> Result<UMessage, UStatus>
     {
         
-        async {
-            // Your implementation here
-            println!("receiving message");
-
-            // Simulate asynchronous operation (e.g., sending over network)
-           // tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-
-            // Simulate successful result
-            let mut message = UMessage::new();
-            Ok(message)
-        }.await
+        Err(UStatus::fail_with_code(
+            UCode::UNIMPLEMENTED,
+            "Not implemented",
+        ))
         
     }
 
@@ -342,27 +341,55 @@ impl UTransport for UtrasnsportSocket{
     ) -> Result<String, UStatus>
     {
 
-        let topic_serialized = topic.to_string().into_bytes();
 
-        //let mut topic_to_listener = self.topic_to_listener.lock().await;
-       // let mut topic_to_listener = GLOBAL_MAP;
-        let _listener= Listener{ callback:todo!(), data:todo!()};
-        GLOBAL_MAP.insert(topic_serialized, _listener);
+        let listener = Arc::new(listener);
+       // self.listner_map.lock().unwrap().insert(topic.to_string(),listener);
+       
 
 
-        //if let Some(listeners) = topic_to_listener.get_mut(&topic_serialized.as_bytes().to_vec()) {
-          //  listener.p;
-        //} else {
-          //  topic_to_listener.insert(topic_serialized, vec![listener]);
-       // }
-    
-        Err(UStatus {
-            code: up_rust::uprotocol::UCode::OK.into(),
-            message: Some("OK".to_string()), // Convert &str to String and wrap it into Some
-            details: todo!(),
-            special_fields: todo!(),
-        })
-        //UStatus { code: up_rust::uprotocol::UCode::OK, message: "OK",details:todo!(),special_fields:todo!() }
+
+        if topic.authority.is_some() && topic.entity.is_none() && topic.resource.is_none() {
+            // This is special UUri which means we need to register for all of Publish, Request, and Response
+            // RPC response
+            Err(UStatus::fail_with_code(
+                UCode::UNIMPLEMENTED,
+                "Not implemented",
+            ))
+        } else {
+            // Do the validation
+            UriValidator::validate(&topic)
+                .map_err(|_| UStatus::fail_with_code(UCode::INVALID_ARGUMENT, "Invalid topic"))?;
+
+            if UriValidator::is_rpc_response(&topic) {
+                
+                self.listner_map.lock()
+                                .unwrap()
+                                .entry(topic.to_string())
+                                .and_modify(|Listener| Listener.push(listener.clone()))
+                                .or_insert_with(|| vec![listener]);
+            
+                Ok("register listner successful".to_string())
+
+            } else if UriValidator::is_rpc_method(&topic) {
+                
+                 self.listner_map.lock()
+                                .unwrap()
+                                .entry(topic.to_string())
+                                .and_modify(|Listener| Listener.push(listener.clone()))
+                                .or_insert_with(|| vec![listener]);
+                 Ok("register listner successful".to_string())
+               
+            } else {
+                
+               self.listner_map.lock()
+                                .unwrap()
+                                .entry(topic.to_string())
+                                .and_modify(|Listener| Listener.push(listener.clone()))
+                                .or_insert_with(|| vec![listener]);
+               Ok("register listner successful".to_string())
+               
+            }
+        }
     }
 
 
@@ -395,6 +422,13 @@ impl UTransport for UtrasnsportSocket{
            // }
        // }
     
+      // fn remove_callback(&mut self, uri: &str, callback: Callback) {
+        //if let Some(callbacks) = self.map.get_mut(uri) {
+          //  callbacks.retain(|&cb| cb != callback);
+            //if callbacks.is_empty() {
+              //  self.map.remove(uri);
+           // }
+        //}
           //Err(UStatus{code: up_rust::uprotocol::UCode::OK.into(), message: "OK",details:todo!(),special_fields:todo!()}) 
           Err(UStatus {
             code: up_rust::uprotocol::UCode::OK.into(),

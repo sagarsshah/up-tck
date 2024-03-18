@@ -56,7 +56,7 @@ impl Clone for SocketTestAgent {
 }
 
 impl SocketTestAgent  {
-   pub fn new(test_clientsocket: TcpStream, utransport: UtrasnsportSocket) -> Self {
+   pub async fn new(test_clientsocket: TcpStream, utransport: UtrasnsportSocket) -> Self {
         let clientsocket = test_clientsocket.try_clone().expect("Failed to clone socket");
      //   let possible_received_protobufs = vec![UMessage::default()]; // Modify with appropriate initialization
       //  let listener: Listener = None; 
@@ -83,7 +83,7 @@ impl SocketTestAgent  {
 //}    
 
 
-fn on_receive(self,result:Result<UMessage, UStatus>) {
+async fn on_receive(self,result:Result<UMessage, UStatus>) {
     println!("Listener onreceived");
 
   
@@ -155,7 +155,7 @@ fn on_receive(self,result:Result<UMessage, UStatus>) {
                           //  let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_listener.on_receive(result));
 
                             //let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_listener.on_receive(result));
-                            let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| <SocketTestAgent as Clone>::clone(&cloned_listener).on_receive(result));
+                            let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| { <SocketTestAgent as Clone>::clone(&cloned_listener).on_receive(result); });
                             //self.utransport.register_listener(umsg.attributes.source.clone().unwrap(),cloned_listener_data);
                             self.utransport.register_listener(umsg.attributes.source.clone().unwrap(),cloned_listener_data);
                             ()
