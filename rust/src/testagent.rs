@@ -1,24 +1,46 @@
-use std::{io::Write, net::TcpStream};
+/*
+ * Copyright (c) 2023 General Motors GTO LLC
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * SPDX-FileType: SOURCE
+ * SPDX-FileCopyrightText: 2023 General Motors GTO LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
+use std::{io::Write/* , net::TcpStream*/};
+//use async_std::sync::Mutex;
+use tokio::runtime::Runtime;
+use tokio::io::{AsyncReadExt,AsyncWriteExt};
+use tokio::net::TcpStream;
 use std::io::Read;
-use serde_json::to_string;
-use std::sync::Arc;
-
-use std::collections::HashMap;
-
-use std::thread;
-use base64::Engine;
+//use std::sync::Arc;
+//use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use protobuf::{Message, MessageDyn};
-//use up_rust::rpc::RpcMapper;
-//use up_rust::{UCode, UMessage, UStatus};
 use up_rust::{
-  //  transport::validator::Validators,
     rpc::RpcMapper, transport::datamodel::UTransport, uprotocol::{
         umessage, UCode, UMessage, UStatus, UUri 
     }
-   // uri::validator::UriValidator,
 };
-
+use std::{
+    collections::HashMap,
+    sync::{atomic::AtomicU64, Arc, Mutex},
+   // time::Duration,
+};
 
 use crate::uTransportSocket::UtrasnsportSocket;
 use crate::utils::{base64_to_protobuf_bytes, protobuf_to_base64, send_socket_data,convert_json_to_jsonstring};
@@ -29,15 +51,13 @@ pub struct JsonData {
     message: String,
 }
 // Define a listener type alias
-//type Listener = Box<dyn Fn(Result<(), UStatus>) + Send + Sync + 'static>;
+
 
 type Listener = Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>;
 //#[derive(Clone)]
 pub struct SocketTestAgent {
     utransport: UtrasnsportSocket,
-   // possible_received_protobufs: Vec<UMessage>,
-  // listener:Listener,
-    clientsocket: TcpStream,
+    clientsocket:Arc<Mutex<TcpStream>>,
     listner_map: Vec<String>,
 }
 
@@ -45,7 +65,7 @@ impl Clone for SocketTestAgent {
     fn clone(&self) -> Self {
         SocketTestAgent {
             utransport: self.utransport.clone(), // Assuming UtrasnsportSocket implements Clone
-            clientsocket: self.clientsocket.try_clone().expect("Failed to clone TcpStream"), // Clone TcpStream
+            clientsocket: self.clientsocket.clone(),
             listner_map: self.listner_map.clone(), // Clone Vec<String>
         }
     }
@@ -57,74 +77,66 @@ impl Clone for SocketTestAgent {
 
 impl SocketTestAgent  {
    pub async fn new(test_clientsocket: TcpStream, utransport: UtrasnsportSocket) -> Self {
-        let clientsocket = test_clientsocket.try_clone().expect("Failed to clone socket");
-     //   let possible_received_protobufs = vec![UMessage::default()]; // Modify with appropriate initialization
-      //  let listener: Listener = None; 
        
-            
+    let socket = Arc::new(Mutex::new(test_clientsocket));
+        let clientsocket= socket;
+          
         SocketTestAgent {
             utransport,
-    
             clientsocket,
-    
             listner_map: Vec::new(),
-            
-            
+          
         }
     }
 
-//    pub fn TM_receive_thread (&mut self)
-//{
-    //let utransport_clone = utransport.clone();
-  //  thread::spawn(move || {
-       // Self::receive_from_tm (self,&mut self.clientsocket, self.utransport);
-    //   self.receive_from_tm(&mut self.clientsocket, self.utransport);
-    //});
-//}    
-
-
 async fn on_receive(self,result:Result<UMessage, UStatus>) {
     println!("Listener onreceived");
-
-  
     let mut json_message = JsonData {
         action: "onReceive".to_owned(),
         message: "None".to_string(),
     };
-
     match result {
         Ok(message) => json_message.message = protobuf_to_base64(&message),
         Err(status)=> println!("Received error status: {}", status),
      }
-
-    // self.send_to_tm(json_message);
-  
+     self.send_to_tm(json_message);
+ 
 }
     
-  //   fn receive_from_tm(&mut self,clientsocket:&mut TcpStream, utransport: UtrasnsportSocket) {
+
     pub async  fn receive_from_tm (&mut self){
-       
-        //let testlistner:Listener = Box::new(self.testa);  
-            // Clone Arc to capture it in the closure
-            let arc_self = Arc::new(self.clone());  
-            //let cloned_Arc_self = Arc::clone(&arc_self);
-       // let listener:Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_Arc_self.on_receive(result));
-
-    //   let listener:Listener = Box::new( arc_self.on_receive(Result<UMessage, UStatus>));
-       
-
-
-
+         // Clone Arc to capture it in the closure
+        
+        let arc_self = Arc::new(self.clone());  
+        <SocketTestAgent as Clone>::clone(&self).inform_tm_ta_starting();
+        let mut socket = self
+        .clientsocket
+        .lock()
+        .expect("error accessing TM server");
+    
+      
         loop {
             let mut recv_data = [0; 1024];
-            let recv_result = self.clientsocket.read(&mut recv_data);
-            //let recv_result = clientsocket
-            match recv_result {
+            
+            let bytes_received = match socket.read(&mut recv_data).await{
+            Ok(bytes_received) => bytes_received,
+            Err(e) => {
+                // Handle socket errors (e.g., connection closed)
+                eprintln!("Socket error: {}", e);
+                break;
+            }};
+              // Check if no data is received
+            if bytes_received == 0 {
+                continue;
+            }
+        
+
+          /*   match recv_result {
                 Ok(bytes_received) => {
                     if bytes_received == 0 {
                         println!("Closing TA Client Socket");
                         break;
-                    }
+                    }*/
                     let recv_data_str: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&recv_data[..bytes_received]);
                     let json_msg: HashMap<String, String> = serde_json::from_str(&recv_data_str).unwrap(); // Assuming serde_json is used for JSON serialization/deserialization
                     let action = json_msg["action"].clone();
@@ -152,11 +164,7 @@ async fn on_receive(self,result:Result<UMessage, UStatus>) {
                         
                         "REGISTER_LISTENER_COMMAND" => {
                             let cloned_listener = Arc::clone(&arc_self);
-                          //  let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_listener.on_receive(result));
-
-                            //let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| cloned_listener.on_receive(result));
                             let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| { <SocketTestAgent as Clone>::clone(&cloned_listener).on_receive(result); });
-                            //self.utransport.register_listener(umsg.attributes.source.clone().unwrap(),cloned_listener_data);
                             self.utransport.register_listener(umsg.attributes.source.clone().unwrap(),cloned_listener_data);
                             ()
                         }, // Assuming listener can be cloned
@@ -177,42 +185,47 @@ async fn on_receive(self,result:Result<UMessage, UStatus>) {
                     let json_message = JsonData{
                         action:"uStatus".to_owned(),
                         message: base64_str, 
-                        
-                
-                    };
-                    //self.send_to_tm(json_message);
-                    //self.send_to_tm(json_message);
-            
-
-                }
-                Err(e) => {
-                    eprintln!("Error receiving data: {}", e);
-                    break;
-                }
+                             };
+               // Err(e) => {
+                 //   eprintln!("Error receiving data: {}", e);
+                 //   break;
+               // }
             }
-        }
+        
     }
     
+  
+  async fn inform_tm_ta_starting(self) {
 
 
-   
-
-    fn send_to_tm(self, json_message:JsonData) {
-        // Sends JSON data to Test Manager
-        let json_message_str = convert_json_to_jsonstring(&json_message);
-        //let json_message_str = serde_json:to_string(&json_message).expect("Failed to serialize JSON");
-
+ #[derive(Serialize)]
+    struct JsonSdkname {
+        sdk_name: String,
+    }
+    let json_sdk_name = JsonSdkname {
+        sdk_name: String::from("Rust"),
+    };   
+        //infor TM that rust TA is running
+        println!("Sending SDK name to Test Manager Directly!");
+        let json_message_str = convert_json_to_jsonstring(&json_sdk_name);
         let message = json_message_str.as_bytes();
 
-        let mut socket_clone = self.clientsocket.try_clone().expect("issue in cloneing");
-        socket_clone.write_all(message);           
-
-   //     if let Err(err) = self.send_socket_data(&mut self.clientsocket , &message) {
-     //       eprintln!("Error sending message: {}", err);
-       // }
-
+        let mut socket_clone = self.clientsocket.clone();
+        //socket_clone.write_all(message);   
+        socket_clone.lock().expect("error in sending data to TM").write_all(message);         
+  
     }
-    fn close_connection(&self) {
-        self.clientsocket.shutdown(std::net::Shutdown::Both).expect("Failed to close socket");
+
+    async fn send_to_tm(self, json_message:JsonData) {
+   
+        let json_message_str = convert_json_to_jsonstring(&json_message);
+        let message = json_message_str.as_bytes();
+        let mut socket_clone = self.clientsocket.clone();
+        //socket_clone.write_all(message);   
+        socket_clone.lock().expect("error in sending data to TM").write_all(message);         
+  
+    }
+   async fn close_connection(&self) {
+        self.clientsocket.lock().expect("error in sending data to TM").shutdown();
     }
 }
