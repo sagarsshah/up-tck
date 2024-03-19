@@ -24,24 +24,13 @@
 
 mod constants;
 mod utils;
+mod uTransportSocket;
 use crate::constants::*;
 use crate::uTransportSocket::UtransportExt;
 use testagent::SocketTestAgent;
 use uTransportSocket::UtrasnsportSocket;
 mod testagent;
-mod uTransportSocket;
-
-use std::io::{self, Write};
-use std::net::{Shutdown, /*TcpStream*/};
-use std::thread;
-
-use crate::utils::{convert_json_to_jsonstring, convert_str_to_bytes, send_socket_data};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-
-use std::sync::Arc;
 use tokio::runtime::Runtime;
-use tokio::io::{AsyncReadExt,AsyncWriteExt};
 use tokio::net::TcpStream;
 
 fn main() {
@@ -49,15 +38,15 @@ fn main() {
     let transport = UtrasnsportSocket::new();
     let rt = Runtime::new().unwrap();
     rt.block_on(async { 
-        let mut test_agent_socket = TcpStream::connect(TEST_MANAGER_ADDR).await.unwrap();
+        let test_agent_socket = TcpStream::connect(TEST_MANAGER_ADDR).await.unwrap();
         
         let mut transport_socket =transport.await;
-        transport_socket.socket_init();        
-        let mut agent = SocketTestAgent::new(test_agent_socket, transport_socket);
+        transport_socket.socket_init().await;        
+        let agent = SocketTestAgent::new(test_agent_socket, transport_socket);
                  
 
-        agent.await.receive_from_tm();
-       // agent.await.inform_tm_ta_starting();   
+        agent.await.receive_from_tm().await;
+      
           
     });
 }
