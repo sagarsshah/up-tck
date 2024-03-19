@@ -108,7 +108,7 @@ async fn on_receive(self,result:Result<UMessage, UStatus>) {
          // Clone Arc to capture it in the closure
         
         let arc_self = Arc::new(self.clone());  
-        <SocketTestAgent as Clone>::clone(&self).inform_tm_ta_starting();
+        <SocketTestAgent as Clone>::clone(&self).inform_tm_ta_starting().await;
         let mut socket = self
         .clientsocket
         .lock()
@@ -158,19 +158,19 @@ async fn on_receive(self,result:Result<UMessage, UStatus>) {
                         "SEND_COMMAND" => {
                             match self.utransport.send(umsg).await{
                                 Ok(_) =>{println!("message sent successfully");()}
-                                Err(status)=>{println!("failed to send message");()}
+                                Err(_status)=>{println!("failed to send message");()}
                             }
                         },
                         
                         "REGISTER_LISTENER_COMMAND" => {
                             let cloned_listener = Arc::clone(&arc_self);
                             let cloned_listener_data: Listener = Box::new(move |result: Result<UMessage, UStatus>| { <SocketTestAgent as Clone>::clone(&cloned_listener).on_receive(result); });
-                            self.utransport.register_listener(umsg.attributes.source.clone().unwrap(),cloned_listener_data);
+                            let _ = self.utransport.register_listener(umsg.attributes.source.clone().unwrap(),cloned_listener_data);
                             ()
                         }, // Assuming listener can be cloned
                        
                        "UNREGISTER_LISTENER_COMMAND" => {
-                        self.utransport.unregister_listener(umsg.attributes.source.clone().unwrap(),&self.listner_map[0]);
+                        let _ = self.utransport.unregister_listener(umsg.attributes.source.clone().unwrap(),&self.listner_map[0]);
                         ()
                         }, // Assuming listener can be cloned
 
@@ -180,9 +180,9 @@ async fn on_receive(self,result:Result<UMessage, UStatus>) {
                     };
 
 
-                  let mut status_clone= status.clone();  
+                  let _status_clone= status.clone();  
                  let base64_str  = serde_json::to_string(&status).unwrap();
-                    let json_message = JsonData{
+                    let _json_message = JsonData{
                         action:"uStatus".to_owned(),
                         message: base64_str, 
                              };
@@ -210,9 +210,9 @@ async fn on_receive(self,result:Result<UMessage, UStatus>) {
         let json_message_str = convert_json_to_jsonstring(&json_sdk_name);
         let message = json_message_str.as_bytes();
 
-        let mut socket_clone = self.clientsocket.clone();
+        let socket_clone = self.clientsocket.clone();
         //socket_clone.write_all(message);   
-        socket_clone.lock().expect("error in sending data to TM").write_all(message);         
+        let _ = socket_clone.lock().expect("error in sending data to TM").write_all(message);         
   
     }
 
@@ -220,12 +220,11 @@ async fn on_receive(self,result:Result<UMessage, UStatus>) {
    
         let json_message_str = convert_json_to_jsonstring(&json_message);
         let message = json_message_str.as_bytes();
-        let mut socket_clone = self.clientsocket.clone();
-        //socket_clone.write_all(message);   
-        socket_clone.lock().expect("error in sending data to TM").write_all(message);         
+        let socket_clone = self.clientsocket.clone();
+        let _ = socket_clone.lock().expect("error in sending data to TM").write_all(message);         
   
     }
-   async fn close_connection(&self) {
-        self.clientsocket.lock().expect("error in sending data to TM").shutdown();
+   fn close_connection(&self) {
+        let _ = self.clientsocket.lock().expect("error in sending data to TM").shutdown();
     }
 }
