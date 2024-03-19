@@ -38,7 +38,7 @@ use tokio::net::TcpStream;
 use std::{
     collections::HashMap,
     sync::{atomic::AtomicU64, Arc, Mutex},
-   // time::Duration,
+  
 };
 
 use up_rust::{
@@ -104,7 +104,6 @@ impl UtransportExt for UtrasnsportSocket {
             let bytes_read = match self.read_socket(&mut buffer).await {
                 Ok(bytes_read) => bytes_read,
                 Err(e) => {
-                    // Handle socket errors (e.g., connection closed)
                     eprintln!("Socket error: {}", e);
                     break;
                 }
@@ -149,7 +148,7 @@ impl UtransportExt for UtrasnsportSocket {
     }
 
     fn _handle_publish_message(&mut self, umsg: UMessage) {
-        let topic_b = umsg.attributes.source.to_string().as_bytes().to_vec();
+//        let _topic_b = umsg.attributes.source.to_string().as_bytes().to_vec();
 
         if let Some(tests) = self
             .listner_map
@@ -323,7 +322,7 @@ impl UTransport for UtrasnsportSocket {
                     .lock()
                     .unwrap()
                     .entry(topic.to_string())
-                    .and_modify(|Listener| Listener.push(listener.clone()))
+                    .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![listener]);
 
                 Ok("register listner successful".to_string())
@@ -332,7 +331,7 @@ impl UTransport for UtrasnsportSocket {
                     .lock()
                     .unwrap()
                     .entry(topic.to_string())
-                    .and_modify(|Listener| Listener.push(listener.clone()))
+                    .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![listener]);
                 Ok("register listner successful".to_string())
             } else {
@@ -340,7 +339,7 @@ impl UTransport for UtrasnsportSocket {
                     .lock()
                     .unwrap()
                     .entry(topic.to_string())
-                    .and_modify(|Listener| Listener.push(listener.clone()))
+                    .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![listener]);
                 Ok("register listner successful".to_string())
             }
@@ -360,7 +359,7 @@ impl UTransport for UtrasnsportSocket {
     ///
     /// Returns an error if the listener could not be unregistered, for example if the given listener does not exist.
     async fn unregister_listener(&self, topic: UUri, listener: &str) -> Result<(), UStatus> {
-        let topic_serialized = topic.to_string().as_bytes().to_vec(); // Assuming SerializeToString returns Result<Vec<u8>, _>
+        let _topic_serialized = topic.to_string().as_bytes().to_vec(); // Assuming SerializeToString returns Result<Vec<u8>, _>
 
         //  if let Some(listeners) = self.topic_to_listener.get_mut(&topic_serialized) {
         //    if listeners. > 1 {
