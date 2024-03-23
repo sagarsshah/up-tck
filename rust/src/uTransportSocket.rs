@@ -26,6 +26,12 @@
 use async_std::io;
 use async_trait::async_trait;
 
+
+
+use up_rust::ulistener::UListener;
+use up_rust::{PublishValidator, RequestValidator, ResponseValidator, UAttributesValidator, UAttributesValidators, UriValidator};
+use up_rust::{UMessage, UStatus, UUri,UCode,UAttributes,Data,UMessageType,UTransport};
+
 use protobuf::{Message, MessageDyn};
 use std::net::TcpStream as TcpStreamSync;
 use std::{
@@ -41,19 +47,16 @@ use std::{
   
 };
 
-use up_rust::{
-    transport::{datamodel::UTransport, validator::Validators},
-    uprotocol::{
-        Data, UAttributes, UCode, UMessage, UMessageType, UStatus, UUri,
-    },
-    uri::validator::UriValidator,
-};
+//use up_rust::{
+  //  utransport::{datamodel::UTransport, validator::Validators},
+   
+//};
 
 use crate::constants::BYTES_MSG_LENGTH;
 use crate::constants::DISPATCHER_ADDR;
 
 
-pub type UtransportListener = Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>;
+//pub type UtransportListener = Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>;
 
 pub trait UtransportExt {
     
@@ -65,7 +68,7 @@ pub trait UtransportExt {
 pub struct UtrasnsportSocket {
     socket: Arc<Mutex<TcpStream>>, //TcpStream,
     socket_sync: TcpStreamSync,
-    listner_map: Arc<Mutex<HashMap<String, Vec<Arc<UtransportListener>>>>>,
+    listner_map: Arc<Mutex<HashMap<String, Vec<Arc<dyn UListener>>>>>,
 }
 impl Clone for UtrasnsportSocket {
     fn clone(&self) -> Self {
@@ -148,16 +151,15 @@ impl UtransportExt for UtrasnsportSocket {
     }
 
     fn _handle_publish_message(&mut self, umsg: UMessage) {
-//        let _topic_b = umsg.attributes.source.to_string().as_bytes().to_vec();
 
-        if let Some(tests) = self
+        if let Some(listner_array) = self
             .listner_map
             .lock()
             .unwrap()
             .get(&umsg.attributes.source.to_string())
         {
-            for listner in tests {
-                listner(Ok(umsg.clone()));
+            for listner_ref in listner_array {
+                listner_ref.on_receive(Ok(umsg.clone()));
             }
         }
     }
@@ -206,7 +208,9 @@ impl UTransport for UtrasnsportSocket {
             .map_err(|_| UStatus::fail_with_code(UCode::INTERNAL, "Unable to parse type"))?
         {
             UMessageType::UMESSAGE_TYPE_PUBLISH => {
-                Validators::Publish
+                
+         // PublishValidator::validate(, &attributes) /* .map(|e|{ UStatus::fail_with_code(UCode::INVALID_ARGUMENT,format!("wrong Publish Uattribute{e:?}"),})?;*/
+         UAttributesValidators::Publish
                     .validator()
                     .validate(&attributes)
                     .map_err(|e| {
@@ -225,7 +229,7 @@ impl UTransport for UtrasnsportSocket {
                 }
             }
             UMessageType::UMESSAGE_TYPE_REQUEST => {
-                Validators::Request
+                UAttributesValidators::Request
                     .validator()
                     .validate(&attributes)
                     .map_err(|e| {
@@ -243,7 +247,7 @@ impl UTransport for UtrasnsportSocket {
                 }
             }
             UMessageType::UMESSAGE_TYPE_RESPONSE => {
-                Validators::Response
+                UAttributesValidators::Response
                     .validator()
                     .validate(&attributes)
                     .map_err(|e| {
@@ -298,12 +302,20 @@ impl UTransport for UtrasnsportSocket {
     /// # Errors
     ///
     /// Returns an error if the listener could not be registered.
-    async fn register_listener(
-        &self,
-        topic: UUri,
-        listener: Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>,
-    ) -> Result<String, UStatus> {
-        let listener = Arc::new(listener);
+    /// 
+    /// 
+    /// 
+    
+    async fn register_listener<T>(&self, topic: UUri, listener: &Arc<T>) -> Result<(), UStatus>
+    where
+        T: UListener
+   // async fn register_listener(
+     //   &self,
+       // topic: UUri,
+        //listener: Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>,
+    //) -> Result<String, UStatus> 
+    {
+        //let listener = Arc::new(listener);
         // self.listner_map.lock().unwrap().insert(topic.to_string(),listener);
         if topic.authority.is_some() && topic.entity.is_none() && topic.resource.is_none() {
             // This is special UUri which means we need to register for all of Publish, Request, and Response
@@ -323,25 +335,27 @@ impl UTransport for UtrasnsportSocket {
                     .unwrap()
                     .entry(topic.to_string())
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    .or_insert_with(|| vec![listener]);
+                    //.or_insert_with(|| vec![listener]);
+                    .or_insert_with(|| vec![Arc::clone(listener)as Arc<dyn UListener>]);
 
-                Ok("register listner successful".to_string())
+
+                Ok(/*"register listner successful".to_string*/())
             } else if UriValidator::is_rpc_method(&topic) {
                 self.listner_map
                     .lock()
                     .unwrap()
                     .entry(topic.to_string())
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    .or_insert_with(|| vec![listener]);
-                Ok("register listner successful".to_string())
+                    .or_insert_with(|| vec![Arc::clone(listener)as Arc<dyn UListener>]);
+                Ok(/*"register listner successful".to_string*/())
             } else {
                 self.listner_map
                     .lock()
                     .unwrap()
                     .entry(topic.to_string())
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    .or_insert_with(|| vec![listener]);
-                Ok("register listner successful".to_string())
+                    .or_insert_with(|| vec![Arc::clone(listener)as Arc<dyn UListener>]);
+                Ok(/*"register listner successful".to_string()*/())
             }
         }
     }
@@ -358,29 +372,28 @@ impl UTransport for UtrasnsportSocket {
     /// # Errors
     ///
     /// Returns an error if the listener could not be unregistered, for example if the given listener does not exist.
-    async fn unregister_listener(&self, topic: UUri, listener: &str) -> Result<(), UStatus> {
-        let _topic_serialized = topic.to_string().as_bytes().to_vec(); // Assuming SerializeToString returns Result<Vec<u8>, _>
+    async fn unregister_listener<T>(&self, topic: UUri, listener: &Arc<T>) -> Result<(), UStatus>
+    where
+        T: UListener, {
+       
+        let mut map = self.listner_map.lock().expect("Failed to acquire lock");
+        let mut listner_clone = Arc::clone(listener)as Arc<dyn UListener>;
 
-        //  if let Some(listeners) = self.topic_to_listener.get_mut(&topic_serialized) {
-        //    if listeners. > 1 {
-        //      if let Some(index) = listeners.iter().position(|x| *x == listener) {
-        //        listeners.remove(index);
-        //  }
-        //} else {
-        //   self.topic_to_listener.remove(&topic_serialized);
-        // }
-        // }
+        if let Some(listeners) = map.get_mut(&topic.to_string()) {
+            if let Some(index) = listeners.iter().position(|l| Arc::ptr_eq(l, &listner_clone)) {
+               let _ =  listeners.remove(index);
+    
+                // If the vector becomes empty after removal, delete the entry from the map
+                if listeners.is_empty() {
+                    map.remove(&topic.to_string());
+                }
+            }
+        }
 
-        // fn remove_callback(&mut self, uri: &str, callback: Callback) {
-        //if let Some(callbacks) = self.map.get_mut(uri) {
-        //  callbacks.retain(|&cb| cb != callback);
-        //if callbacks.is_empty() {
-        //  self.map.remove(uri);
-        // }
-        //}
-        //Err(UStatus{code: up_rust::uprotocol::UCode::OK.into(), message: "OK",details:todo!(),special_fields:todo!()})
+
+
         Err(UStatus {
-            code: up_rust::uprotocol::UCode::OK.into(),
+            code: up_rust::UCode::OK.into(),
             message: Some("OK".to_string()), // Convert &str to String and wrap it into Some
             details: todo!(),
             special_fields: todo!(),
