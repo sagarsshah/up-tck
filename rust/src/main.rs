@@ -23,112 +23,160 @@
  */
 
 mod constants;
-mod utils;
 mod uTransportSocket;
+mod utils;
+/*use std::arch::x86_64::_SIDD_BIT_MASK;
+use std::default;
+use std::str::FromStr;
+use std::u32;*/
+
+//use std::simd::u64x1;
+
 use crate::constants::*;
 use crate::uTransportSocket::UtransportExt;
-//use protobuf::Message;
-use prost::Message;
+//use crate::utils::convert_str_to_bytes;
+use crate::utils::WrapperUMessage;
+use log::kv::{value, ToValue};
+//use serde::{Deserialize, Deserializer, Serialize};
 use testagent::SocketTestAgent;
 use uTransportSocket::UtrasnsportSocket;
 mod testagent;
-use tokio::runtime::Runtime;
+use anystruct::{IntoProto, ProtoStruct};
+use json2pb::pbgen;
+use serde_json::{/*map,*/ Value};
 use tokio::net::TcpStream;
-use up_rust::UMessage;
-use prost::bytes::Bytes;
-use serde_json::{map, Value};
+use tokio::runtime::Runtime;
+
+// Function to recursively convert log::kv::Value to serde_json::Value
+/*fn convert_to_json(value: &log::kv::Value<'_>) -> Value {
+    let return_value = match value {
 
 
-fn main() {
-   
-    let json_str = r#"
-    {
-        "attributes": {
-            "priority": "UPRIORITY_CS1",
-            "type": "UMESSAGE_TYPE_PUBLISH",
-            "id": "12345"
-        },
-        "payload": {
-            "format": "UPAYLOAD_FORMAT_PROTOBUF_WRAPPED_IN_ANY"
+           log::kv::value::Value:: => {Value::String(return_value.to_string())},
+            None=>Value::default(),
+        }
+    //    log::kv::Value::Nil => Value::Null,
+   //     log::kv::Value::I64(i) => Value::Number((*i).into()),
+     //   log::kv::Value::U64(u) => Value::Number((*u).into()),
+      //  log::kv::Value::F64(f) => Value::Number((*f).into()),
+       // log::kv::Value::String(s) => Value::String(s.to_string()),
+       // log::kv::Value::Map(map) => {
+         //   let obj: serde_json::Map<String, Value> = map
+           //     .iter()
+             //   .map(|(k, v)| (k.to_string(), convert_to_json(v)))
+               // .collect();
+           // Value::Object(obj)
+       // }
+        log::kv::Value::Seq(seq) => {
+            let vec: Vec<Value> = seq.iter().map(|v| convert_to_json(v)).collect();
+            Value::Array(vec)
         }
     }
-"#;
-let result = json_to_protobuf(json_str)?;
-  // Check if deserialization was successful
-  match result {
-    Ok(protobuf_message) => {
-        println!("Deserialized protobuf message: {:?}", protobuf_message);
-        // Add assertions or further processing here
+}*/
+/*
+fn string_to_json(data: &str) -> Result<Value, serde_json::Error> {
+    // Remove leading/trailing whitespaces
+    let clean_data = data.trim();
+
+    // Split the data by lines
+    let lines = clean_data.split('\n');
+
+    // Collect key-value pairs
+    let mut map = serde_json::Map::new();
+    for line in lines {
+        let mut parts = line.splitn(2, ':');
+        let key = parts.next().unwrap().trim();
+        let value = parts.next().unwrap_or("").trim();
+
+        // Handle nested structures
+        if value.contains('{') {
+            let inner_json = string_to_json(value)?;
+            map.insert(key.to_string(), inner_json);
+        } else {
+            // Handle basic types (string, number)
+            map.insert(key.to_string(), Value::String(value.to_string()));
+        }
     }
-    Err(err) => {
-        eprintln!("Error: {}", err);
-        // Handle error here
-    }
+
+    // Convert map to final JSON value
+    Ok(Value::Object(map))
+}*/
+
+fn string_to_json(string_value: &str) -> Value {
+    // Replace spaces with commas to make it valid JSON syntax
+    let string_value = string_value.replace(" ", ", ");
+
+    // Add curly braces at the beginning and end to make it a JSON object
+    let string_value = format!("{{{}}}", string_value);
+
+    // Parse the modified string into a JSON object
+    serde_json::from_str(&string_value).unwrap()
 }
 
+fn main() {
+    
+   
     let transport = UtrasnsportSocket::new();
     let rt = Runtime::new().unwrap();
-    rt.block_on(async { 
+    rt.block_on(async {
         let test_agent_socket = TcpStream::connect(TEST_MANAGER_ADDR).await.unwrap();
-        
-        let mut transport_socket =transport.await;
-        transport_socket.socket_init().await;        
+
+        let mut transport_socket = transport.await;
+        transport_socket.socket_init().await;
         let agent = SocketTestAgent::new(test_agent_socket, transport_socket);
-                 
-    
 
         agent.await.receive_from_tm().await;
-    
-      
-          
     });
-
-
 }
+/* 
+let json_str2 = r#"
+  {
+    "attributes": {
+      "id": {
+        "msb": "111982768538681345",
+        "lsb": "9525286032870297316"
+      },
+      "source": {
+        "entity": {
+          "name": "body.access:",
+          "id": "5"
+        },
+        "resource": {
+          "name": "door",
+          "instance": "front_left",
+          "message": "Door"
+        }
+      },
+      "type": "UMESSAGE_TYPE_RESPONSE",
+      "priority": "UPRIORITY_CS4"
+    },
+    "payload": {
+      "format": "UPAYLOAD_FORMAT_PROTOBUF"
+    }
+  }"#;
+
+    // Parse JSON to protobuf message
+    let json_value: Value = serde_json::from_str(json_str2).unwrap();
+
+    println!("json Message: {:?}", json_value);
+
+    let u_message: WrapperUMessage = serde_json::from_value(json_value).unwrap();
+
+    println!("\n\n Protobuf Message: {:?} \n", u_message);
+
+    let binding = u_message.0.to_string();
+    let proto_value = binding.to_value();
+    //let proto_string :Value= proto_value.try_into().expect("couldn't conver");
+    //let json_data = serde_json::from_value(proto_value);
+
+    println!("\n\n Protobuf Message: {:?} \n", proto_value);
+
+    let json_value = string_to_json(&proto_value.to_string());
+
+    println!("Converted JSON: {}", json_value.to_string());
+
+    // Print JSON object
+    println!("{}", serde_json::to_string_pretty(&json_value).unwrap());
 
 
-use prost::Message as _;
-
-//use serde_json::{json, Value};
-use std::error::Error;
-struct MyMessage{
-
-    test: dyn Message,
-}
-pub fn json_to_protobuf(json_str: &str) -> Result<Box<dyn prost::Message>, Box<dyn std::error::Error>> {
-//pub fn json_to_protobuf(json_str: &str) -> Result<MyMessage, Box<dyn std::error::Error>> {
-//pub fn json_to_protobuf(json_str: &str) -> Result< MyMessage, Box<dyn Error>> {
-    // Parse JSON string into a Value
-    let json_obj: Value = serde_json::from_str(json_str)?;
-
-    // Serialize Value back into bytes
-    let bytes = serde_json::to_vec(&json_obj)?;
-
-    // Wrap bytes in a Bytes object
-    let bytes = Bytes::from(bytes);
-
-    // Decode bytes into the protobuf message
-    let protobuf_message = MyMessage::decode(&bytes)?;
-
-    Ok(protobuf_message)
-}
-
- /* 
-pub fn json_to_protobuf<T>( json_str: &str) -> Result<T, Box<dyn std::error::Error>>
-where
-    T: prost::Message + Default,
-{
-      // Parse JSON string into a Value
-      let json_obj: Value = serde_json::from_str(json_str)?;
-
-      // Serialize Value back into bytes
-      let bytes = serde_json::to_vec(&json_obj)?;
-  
-  // Wrap bytes in a Bytes object
-  let bytes = Bytes::from(bytes);
-
-      // Decode bytes into the protobuf message
-      let protobuf_message = T::decode(bytes)?;
-  
-      Ok(protobuf_message)
-}*/
+*/

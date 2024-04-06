@@ -37,7 +37,10 @@ pub const BYTES_MSG_LENGTH: usize = 32767;
 pub fn test_constants() {
     println!("SEND_COMMAND: {}", SEND_COMMAND);
     println!("REGISTER_LISTENER_COMMAND: {}", REGISTER_LISTENER_COMMAND);
-    println!("UNREGISTER_LISTENER_COMMAND: {}", UNREGISTER_LISTENER_COMMAND);
+    println!(
+        "UNREGISTER_LISTENER_COMMAND: {}",
+        UNREGISTER_LISTENER_COMMAND
+    );
     println!("INVOKE_METHOD_COMMAND: {}", INVOKE_METHOD_COMMAND);
     println!("DISPATCHER_ADDR: {:?}", DISPATCHER_ADDR);
     println!("TEST_MANAGER_ADDR: {:?}", TEST_MANAGER_ADDR);
