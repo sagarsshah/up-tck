@@ -28,8 +28,7 @@ use serde_json::Value;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::io::{Read, Write};
 use up_rust::{
-    Data, UAttributes, UAuthority, UEntity, UMessage, UMessageType, UPayload, UPayloadFormat,
-    UPriority, UResource, UUri, UUID,
+    Data, UAttributes, UAuthority, UCode, UEntity, UMessage, UMessageType, UPayload, UPayloadFormat, UPriority, UResource, UUri, UUID
 };
 
 use protobuf::{Message, MessageField, SpecialFields};
@@ -251,6 +250,28 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         let value: Value = Deserialize::deserialize(deserializer)?;
         println!("WrapperUAttribute: {:?}", value);
         // Conversion function from string to enum variant
+        fn from_str_comstatus(s: &str) -> UCode{
+            match s {
+               "ABORTED" => UCode::ABORTED,
+               "OK"=> UCode::OK,
+                "CANCELLED" => UCode::CANCELLED,
+                "UNKOWN" =>UCode::UNKNOWN,
+                "INVALID_ARGUMENT"=>UCode::INVALID_ARGUMENT,
+                "DEADLINE_EXCEEDED"=>UCode::DEADLINE_EXCEEDED,
+                "NOT_FOUND"=>UCode::NOT_FOUND,
+                "ALREADY_EXISTS"=>UCode::ALREADY_EXISTS,
+                "PERMISSION_DENIED"=>UCode::PERMISSION_DENIED,
+                "UNAUTHENTICATED"=>UCode::UNAUTHENTICATED,
+                "RESOURCE_EXHAUSTED"=>UCode::RESOURCE_EXHAUSTED,
+                "FAILED_PRECONDITION"=>UCode::FAILED_PRECONDITION,
+                "OUT_OF_RANGE"=>UCode::OUT_OF_RANGE,
+                "UNIMPLEMENTED"=>UCode::UNIMPLEMENTED,
+                "INTERNAL"=>UCode::INTERNAL,
+                "UNAVAILABLE"=>UCode::UNAVAILABLE,
+                "DATA_LOSS"=>UCode::DATA_LOSS,
+
+            }
+        }
         fn from_str_priority(s: &str) -> UPriority {
             match s {
                 "UPRIORITY_UNSPECIFIED" => UPriority::UPRIORITY_UNSPECIFIED,
@@ -342,7 +363,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             Some(_ttl) => _ttl
                 .as_str()
                 .unwrap_or_else(|| panic!("Deserialize: something wrong with ttl field"))
-                .parse::<i32>()
+                .parse::<u32>()
                 .expect("ttl parsing error"),
             None => 0,
         };
@@ -353,18 +374,19 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
                 .unwrap_or_else(|| {
                     panic!("Deserialize: something wrong with permission_level field")
                 })
-                .parse::<i32>()
+                .parse::<u32>()
                 .expect("permission_level parsing error"),
             None => 0,
         };
 
         let _commstatus = match value.get("commstatus") {
-            Some(_commstatus) => _commstatus
-                .as_str()
-                .unwrap_or_else(|| panic!("Deserialize: something wrong with commstatus field"))
-                .parse::<i32>()
-                .expect("commstatus parsing error"),
-            None => 0,
+            
+            Some(_commstatus) => from_str_comstatus(
+                _commstatus
+                    .as_str()
+                    .expect("Deserialize:something wrong with commstatus field"),
+            ),
+            None => UCode::OUT_OF_RANGE,
         };
 
         let _reqid_msb = match value.get("reqid").and_then(|resource| resource.get("msb")) {
@@ -415,9 +437,9 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             source: __source,
             sink: __sink,
             priority: _priority.into(),
-            ttl: Some(_ttl),
-            permission_level: Some(_permission_level),
-            commstatus: Some(_commstatus),
+            ttl: Some(_ttl.into()),
+            permission_level: Some(_permission_level.into()),
+            commstatus: Some(_commstatus.into()),
             reqid: __reqid,
             token: Some(_token.to_owned()),
             traceparent: Some(_traceparent.to_owned()),
