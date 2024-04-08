@@ -25,7 +25,8 @@
 use async_std::io;
 use async_trait::async_trait;
 
-use up_rust::ulistener::UListener;
+//use up_rust::ulistener::UListener;
+use up_rust::UListener;
 use up_rust::{Data, UAttributes, UCode, UMessage, UMessageType, UStatus, UTransport, UUri};
 use up_rust::{
     PublishValidator, RequestValidator, ResponseValidator, UAttributesValidator,
@@ -122,6 +123,7 @@ impl UtransportExt for UtrasnsportSocket {
                         // Ok(())
                         ()
                     }
+                    UMessageType::UMESSAGE_TYPE_NOTIFICATION => todo!(),
                     UMessageType::UMESSAGE_TYPE_UNSPECIFIED => (), //Err("Umessage type unspecified".to_string()),
                     UMessageType::UMESSAGE_TYPE_RESPONSE => (),
                     UMessageType::UMESSAGE_TYPE_REQUEST => {self._handle_request_message(umessage);
@@ -151,7 +153,7 @@ impl UtransportExt for UtrasnsportSocket {
             .get(&umsg.attributes.source.to_string())
         {
             for listner_ref in listner_array {
-                listner_ref.on_receive(Ok(umsg.clone()));
+                listner_ref.on_receive(umsg.clone());
             }
         }
     }
@@ -168,7 +170,7 @@ impl UtransportExt for UtrasnsportSocket {
             .get(&umsg.attributes.sink.to_string())
         {
             for listner_ref in listner_array {
-                listner_ref.on_receive(Ok(umsg.clone()));
+                listner_ref.on_receive(umsg.clone());
             }
         }
     }
@@ -216,6 +218,9 @@ impl UTransport for UtrasnsportSocket {
             .enum_value()
             .map_err(|_| UStatus::fail_with_code(UCode::INTERNAL, "Unable to parse type"))?
         {
+           
+           
+           
             UMessageType::UMESSAGE_TYPE_PUBLISH => {
                 // PublishValidator::validate(, &attributes) /* .map(|e|{ UStatus::fail_with_code(UCode::INVALID_ARGUMENT,format!("wrong Publish Uattribute{e:?}"),})?;*/
                 UAttributesValidators::Publish
@@ -246,6 +251,10 @@ impl UTransport for UtrasnsportSocket {
                             format!("Wrong Request UAttributes {e:?}"),
                         )
                     })?;
+
+
+
+                    
                 match socket_clone.write_all(&umsg_serialized) {
                     Ok(_) => Err(UStatus::ok()),
                     Err(_) => Err(UStatus::fail_with_code(
@@ -275,6 +284,14 @@ impl UTransport for UtrasnsportSocket {
             UMessageType::UMESSAGE_TYPE_UNSPECIFIED => Err(UStatus::fail_with_code(
                 UCode::INVALID_ARGUMENT,
                 "Wrong Message type in UAttributes",
+               
+    
+            )),
+            UMessageType::UMESSAGE_TYPE_NOTIFICATION => Err(UStatus::fail_with_code(
+                UCode::INVALID_ARGUMENT,
+                "Wrong Message type in UAttributes",
+               
+    
             )),
         }
     }
@@ -313,14 +330,15 @@ impl UTransport for UtrasnsportSocket {
     ///
     ///
     ///
+    /// 
+    /// 
 
-    async fn register_listener<T>(&self, topic: UUri, listener: &Arc<T>) -> Result<(), UStatus>
-    where
-        T: UListener, // async fn register_listener(
-                      //   &self,
-                      // topic: UUri,
-                      //listener: Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>,
-                      //) -> Result<String, UStatus>
+    async fn register_listener(
+        &self,
+        topic: UUri,
+        listener: Arc<dyn UListener>,
+    ) -> Result<(), UStatus>
+    
     {
         //let listener = Arc::new(listener);
         // self.listner_map.lock().unwrap().insert(topic.to_string(),listener);
@@ -343,7 +361,7 @@ impl UTransport for UtrasnsportSocket {
                     .entry(topic.to_string())
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
                     //.or_insert_with(|| vec![listener]);
-                    .or_insert_with(|| vec![Arc::clone(listener)as Arc<dyn UListener>]);
+                    .or_insert_with(|| vec![Arc::clone(&listener)as Arc<dyn UListener>]);
 
                 Ok(/*"register listner successful".to_string*/ ())
             } else if UriValidator::is_rpc_method(&topic) {
@@ -352,7 +370,7 @@ impl UTransport for UtrasnsportSocket {
                     .unwrap()
                     .entry(topic.to_string())
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    .or_insert_with(|| vec![Arc::clone(listener) as Arc<dyn UListener>]);
+                    .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
                 Ok(/*"register listner successful".to_string*/ ())
             } else {
                 self.listner_map
@@ -360,7 +378,7 @@ impl UTransport for UtrasnsportSocket {
                     .unwrap()
                     .entry(topic.to_string())
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    .or_insert_with(|| vec![Arc::clone(listener) as Arc<dyn UListener>]);
+                    .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
                 Ok(/*"register listner successful".to_string()*/ ())
             }
         }
@@ -378,12 +396,14 @@ impl UTransport for UtrasnsportSocket {
     /// # Errors
     ///
     /// Returns an error if the listener could not be unregistered, for example if the given listener does not exist.
-    async fn unregister_listener<T>(&self, topic: UUri, listener: &Arc<T>) -> Result<(), UStatus>
-    where
-        T: UListener,
+    async fn unregister_listener(
+        &self,
+        topic: UUri,
+        listener: Arc<dyn UListener>,
+    ) -> Result<(), UStatus>
     {
         let mut map = self.listner_map.lock().expect("Failed to acquire lock");
-        let mut listner_clone = Arc::clone(listener) as Arc<dyn UListener>;
+        let mut listner_clone = Arc::clone(&listener) as Arc<dyn UListener>;
 
         if let Some(listeners) = map.get_mut(&topic.to_string()) {
             if let Some(index) = listeners
