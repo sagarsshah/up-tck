@@ -46,19 +46,13 @@ use std::{
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
 
-//use up_rust::{
-//  utransport::{datamodel::UTransport, validator::Validators},
-
-//};
-
 use crate::constants::BYTES_MSG_LENGTH;
 use crate::constants::DISPATCHER_ADDR;
 
-//pub type UtransportListener = Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>;
-
 pub trait UtransportExt {
     async fn socket_init(&mut self);
-    fn _handle_publish_message(&mut self, umsg: UMessage);
+    fn _handle_publish_message(&mut self, umsg: UMessage );
+    fn _handle_request_message(&mut self, umsg: UMessage );
     async fn read_socket(&mut self, buffer: &mut [u8]) -> io::Result<usize>;
 }
 
@@ -123,13 +117,16 @@ impl UtransportExt for UtrasnsportSocket {
 
             match umessage.attributes.type_.enum_value() {
                 Ok(mt) => match mt {
-                    UMessageType::UMESSAGE_TYPE_PUBLISH | UMessageType::UMESSAGE_TYPE_REQUEST => {
+                    UMessageType::UMESSAGE_TYPE_PUBLISH  => {
                         self._handle_publish_message(umessage);
                         // Ok(())
                         ()
                     }
                     UMessageType::UMESSAGE_TYPE_UNSPECIFIED => (), //Err("Umessage type unspecified".to_string()),
-                    UMessageType::UMESSAGE_TYPE_RESPONSE => (), //Err("umessage type reponse not implemented".to_string()),
+                    UMessageType::UMESSAGE_TYPE_RESPONSE => (),
+                    UMessageType::UMESSAGE_TYPE_REQUEST => {self._handle_request_message(umessage);
+                    // Ok(())
+                    ()} //Err("umessage type reponse not implemented".to_string()),
                 },
                 Err(_) => (), //Err("invalid arguments".to_string()),
             }
@@ -145,11 +142,30 @@ impl UtransportExt for UtrasnsportSocket {
     }
 
     fn _handle_publish_message(&mut self, umsg: UMessage) {
+
+    
         if let Some(listner_array) = self
             .listner_map
             .lock()
             .unwrap()
             .get(&umsg.attributes.source.to_string())
+        {
+            for listner_ref in listner_array {
+                listner_ref.on_receive(Ok(umsg.clone()));
+            }
+        }
+    }
+
+    fn _handle_request_message(&mut self, umsg: UMessage ) {
+        
+
+
+    
+        if let Some(listner_array) = self
+            .listner_map
+            .lock()
+            .unwrap()
+            .get(&umsg.attributes.sink.to_string())
         {
             for listner_ref in listner_array {
                 listner_ref.on_receive(Ok(umsg.clone()));
