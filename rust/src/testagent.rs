@@ -22,6 +22,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 use async_std::net;
+use async_trait::async_trait;
 use base64::Engine;
 use log::kv::{ToKey, ToValue};
 use prost::bytes::Bytes;
@@ -47,7 +48,7 @@ use std::io::Read;
 //use std::collections::HashMap;
 use protobuf::{Message, MessageDyn, SpecialFields};
 //use serde::{Deserialize, Serialize};
-use up_rust::ulistener::UListener;
+use up_rust::UListener;
 use up_rust::{Data, UAttributes, UCode, UMessage, UMessageType, UStatus, UTransport, UUri};
 use up_rust::{
     PublishValidator, RequestValidator, ResponseValidator, UAttributesValidator,
@@ -101,22 +102,24 @@ pub struct SocketTestAgent {
     utransport: UtrasnsportSocket,
     clientsocket: Arc<Mutex<TcpStream>>,
     listner_map: Vec<String>,
+   
 }
-
+#[async_trait]
 impl UListener for SocketTestAgent {
-    fn on_receive(&self, result: Result<UMessage, UStatus>) {
+    async fn on_receive(&self, msg: UMessage){
         println!("Listener onreceived");
         let mut json_message = JsonResponseData {
             action: "onReceive".to_owned(),
             message: "None".to_string(),
             ue: "rust".to_string(),
         };
-        match result {
-            Ok(message) => json_message.message = message.to_string().to_value().to_string(),
-            Err(status) => println!("Received error status: {}", status),
-        }
-        <SocketTestAgent as Clone>::clone(&self).send_to_tm(json_message);
+        json_message.message = msg.clone().to_string().to_value().to_string();
+        
+        //<SocketTestAgent as Clone>::clone(&self).send_to_tm(json_message).await;
+        <SocketTestAgent as Clone>::clone(&self).send_to_tm(json_message).await;
     }
+
+    async fn on_error(&self, err: UStatus){todo!();}
 }
 
 impl Clone for SocketTestAgent {
@@ -125,6 +128,7 @@ impl Clone for SocketTestAgent {
             utransport: self.utransport.clone(), // Assuming UtrasnsportSocket implements Clone
             clientsocket: self.clientsocket.clone(),
             listner_map: self.listner_map.clone(), // Clone Vec<String>
+           
         }
     }
 
@@ -137,11 +141,13 @@ impl SocketTestAgent {
     pub async fn new(test_clientsocket: TcpStream, utransport: UtrasnsportSocket) -> Self {
         let socket = Arc::new(Mutex::new(test_clientsocket));
         let clientsocket = socket;
+       // let socket_ulistener = SocketUListner{ agent: Arc::new(Self::clone()) }; 
 
         SocketTestAgent {
             utransport,
             clientsocket,
             listner_map: Vec::new(),
+         
         }
     }
 
@@ -190,6 +196,7 @@ impl SocketTestAgent {
 
                 "REGISTER_LISTENER_COMMAND" => {
                     let cloned_listener = Arc::clone(&arc_self);
+             
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                     println!("\n\n Send UUri received from TM: {:?} \n", wu_uuri);
                     let u_uuri = wu_uuri.0;
@@ -197,7 +204,7 @@ impl SocketTestAgent {
                         .register_listener(
                             // umsg.attributes.source.clone().unwrap(),
                             u_uuri,
-                            &cloned_listener,
+                            Arc::clone(&cloned_listener) as Arc<dyn UListener> /*&cloned_listener*/,
                         )
                         .await
                 } // Assuming listener can be cloned
@@ -208,7 +215,7 @@ impl SocketTestAgent {
                     println!("\n\n Send UUri received from TM: {:?} \n", wu_uuri);
                     let u_uuri = wu_uuri.0;
                     self.utransport
-                        .unregister_listener(u_uuri, &cloned_listener)
+                        .unregister_listener(u_uuri,Arc::clone(&cloned_listener) as Arc<dyn UListener> /*&cloned_listener*/)
                         .await
                 } // Assuming listener can be cloned
 

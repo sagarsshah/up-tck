@@ -269,6 +269,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
                 "INTERNAL"=>UCode::INTERNAL,
                 "UNAVAILABLE"=>UCode::UNAVAILABLE,
                 "DATA_LOSS"=>UCode::DATA_LOSS,
+                &_ => todo!(),
 
             }
         }
