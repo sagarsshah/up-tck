@@ -40,7 +40,7 @@ use std::{
     //clone,
     io::{Read, Write},
 };
-use tokio::net::TcpStream;
+//use tokio::net::TcpStream;
 
 use crate::constants::BYTES_MSG_LENGTH;
 use crate::constants::DISPATCHER_ADDR;
@@ -399,7 +399,7 @@ impl UTransport for UtrasnsportSocket {
     ) -> Result<(), UStatus>
     {
         let mut map = self.listner_map.lock().expect("Failed to acquire lock");
-        let mut listner_clone = Arc::clone(&listener) as Arc<dyn UListener>;
+        let listner_clone = Arc::clone(&listener) as Arc<dyn UListener>;
 
         if let Some(listeners) = map.get_mut(&topic.to_string()) {
             if let Some(index) = listeners
