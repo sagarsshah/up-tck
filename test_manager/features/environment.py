@@ -41,6 +41,7 @@ from utils import loggerutils
 
 PYTHON_TA_PATH = "/test_agent/python/testagent.py"
 JAVA_TA_PATH = "/test_agent/java/target/tck-test-agent-java-jar-with-dependencies.jar"
+RUST_TA_PATH = "/test_agent/rust/target/debug/rust_tck.exe"
 DISPATCHER_PATH = "/dispatcher/dispatcher.py"
 
 
@@ -55,9 +56,12 @@ def create_command(filepath_from_root_repo: str) -> List[str]:
             command.append("python")
         elif sys.platform == "linux" or sys.platform == "linux2":
             command.append("python3")
+    elif filepath_from_root_repo.endswith('.exe'):
+        pass
     else:
         raise Exception("only accept .jar and .py files")
     command.append(os.path.abspath(os.path.dirname(os.getcwd()) + "/" + filepath_from_root_repo))
+    print(command)
     return command
 
 
@@ -106,6 +110,10 @@ def before_all(context):
     process: subprocess.Popen = create_subprocess(command)
     context.java_ta_process = process
 
+    # command = create_command(RUST_TA_PATH)
+    # process: subprocess.Popen = create_subprocess(command)
+    # context.rust_ta_process = process
+
     context.logger.info("Created All Test Agents...")
 
 
@@ -122,11 +130,13 @@ def after_all(context: Context):
     context.on_receive_deserialized_uuid = None
     context.tm.close_socket(sdk="python")
     context.tm.close_socket(sdk="java")
+    context.tm.close_socket(sdk="rust")
     context.tm.close()
 
     try:
         context.dispatcher_process.terminate()
         context.java_ta_process.terminate()
         context.python_ta_process.terminate()
+        context.rust_ta_process.terminate()
     except Exception as e:
         context.logger.error(e)

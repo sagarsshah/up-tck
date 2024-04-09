@@ -116,32 +116,47 @@ fn string_to_json(string_value: &str) -> Value {
 }*/
 
 fn main() {
-    let transport = UtrasnsportSocket::new();
+  let handle = thread::spawn(|| {
+      // Create a new Tokio runtime
+      let rt = Runtime::new().unwrap();
 
-    let handle = thread::spawn(move || {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            let test_agent_socket = TcpStream::connect(TEST_MANAGER_ADDR).await.unwrap();
+      // Spawn a Tokio task within the runtime
+      rt.block_on(async {
+          // Spawn a Tokio task to connect to TEST_MANAGER_ADDR asynchronously
+          let test_agent_socket = match TcpStream::connect(TEST_MANAGER_ADDR).await {
+              Ok(socket) => socket,
+              Err(err) => {
+                  eprintln!("Error connecting to TEST_MANAGER_ADDR: {}", err);
+                  return;
+              }
+          };
 
-            let mut transport_socket = transport;
-            let transport_socket_clone = transport_socket.clone();
-            tokio::task::spawn_blocking(move || {
-                transport_socket.socket_init();
-            })
-            .await
-            .expect("socket_init failed");
+          println!("Before transport socket");
+          let mut transport_socket = UtrasnsportSocket::new();
+          let transport_socket_clone = transport_socket.clone();
 
-            // let init_handle = tokio::spawn(async move {
-            //   transport_socket.socket_init();
-            // });
-            //  init_handle.unwrap(); // Wait for socket_init() to finish
-            let agent = SocketTestAgent::new(test_agent_socket, transport_socket_clone);
+          // Spawn a blocking task within the runtime
+          let blocking_task = tokio::task::spawn_blocking(move || {
+              transport_socket.socket_init();
+          });
 
-            agent.await.receive_from_tm().await;
-        });
-    });
+          // Don't wait for the blocking task to finish
+          // Instead, handle the error if it occurs
+          tokio::spawn(async move {
+              if let Err(err) = blocking_task.await {
+                  eprintln!("Error in socket_init: {}", err);
+                  return;
+              }
+              println!("socket_init completed successfully");
+          });
 
-    handle.join().unwrap();
+          println!("After transport socket");
+          let agent = SocketTestAgent::new(test_agent_socket, transport_socket_clone);
+          agent.await.receive_from_tm().await;
+      });
+  });
+
+  handle.join().unwrap();
 }
 
 /*
