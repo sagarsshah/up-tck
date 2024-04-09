@@ -37,15 +37,15 @@ use std::thread;
 use crate::constants::*;
 use crate::uTransportSocket::UtransportExt;
 //use crate::utils::convert_str_to_bytes;
-use crate::utils::WrapperUMessage;
-use log::kv::{value, ToValue};
+//use crate::utils::WrapperUMessage;
+//use log::kv::{value, ToValue};
 //use serde::{Deserialize, Deserializer, Serialize};
 use testagent::SocketTestAgent;
 use uTransportSocket::UtrasnsportSocket;
 mod testagent;
-use anystruct::{IntoProto, ProtoStruct};
-use json2pb::pbgen;
-use serde_json::{/*map,*/ Value};
+//use anystruct::{IntoProto, ProtoStruct};
+//use json2pb::pbgen;
+//use serde_json::{/*map,*/ Value};
 use tokio::net::TcpStream;
 use tokio::runtime::Runtime;
 
@@ -103,7 +103,7 @@ fn string_to_json(data: &str) -> Result<Value, serde_json::Error> {
     // Convert map to final JSON value
     Ok(Value::Object(map))
 }*/
-
+/* 
 fn string_to_json(string_value: &str) -> Value {
     // Replace spaces with commas to make it valid JSON syntax
     let string_value = string_value.replace(" ", ", ");
@@ -113,7 +113,7 @@ fn string_to_json(string_value: &str) -> Value {
 
     // Parse the modified string into a JSON object
     serde_json::from_str(&string_value).unwrap()
-}
+}*/
 
 fn main() {
   let transport = UtrasnsportSocket::new();

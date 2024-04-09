@@ -24,27 +24,22 @@
 
 use async_std::io;
 use async_trait::async_trait;
-
-//use up_rust::ulistener::UListener;
 use up_rust::UListener;
-use up_rust::{Data, UAttributes, UCode, UMessage, UMessageType, UStatus, UTransport, UUri};
+use up_rust::{UCode, UMessage, UMessageType, UStatus, UTransport, UUri};
 use up_rust::{
-    PublishValidator, RequestValidator, ResponseValidator, UAttributesValidator,
     UAttributesValidators, UriValidator,
 };
 
-use protobuf::{Message, MessageDyn};
+use protobuf::Message;
 use std::net::TcpStream as TcpStreamSync;
 use std::{
     collections::HashMap,
-    sync::{atomic::AtomicU64, Arc, Mutex},
+    sync::{Arc, Mutex},
 };
 use std::{
     //clone,
     io::{Read, Write},
-    thread,
 };
-use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
 
 use crate::constants::BYTES_MSG_LENGTH;
@@ -77,7 +72,7 @@ impl Clone for UtrasnsportSocket {
 
 impl UtrasnsportSocket {
     pub  fn new() -> Self {
-        let socket_connecton = TcpStream::connect(DISPATCHER_ADDR);//.unwrap();
+       // let _socket_connecton = TcpStream::connect(DISPATCHER_ADDR);//.unwrap();
         let socket_sync: TcpStreamSync =
             TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
     
@@ -154,7 +149,7 @@ impl UtransportExt for UtrasnsportSocket {
             .get(&umsg.attributes.source.to_string())
         {
             for listner_ref in listner_array {
-                listner_ref.on_receive(umsg.clone());
+                let _ = listner_ref.on_receive(umsg.clone());
             }
         }
     }
@@ -171,7 +166,7 @@ impl UtransportExt for UtrasnsportSocket {
             .get(&umsg.attributes.sink.to_string())
         {
             for listner_ref in listner_array {
-                listner_ref.on_receive(umsg.clone());
+                let _ = listner_ref.on_receive(umsg.clone());
             }
         }
     }
@@ -307,7 +302,7 @@ impl UTransport for UtrasnsportSocket {
     ///
     /// Returns an error if no message could be received. Possible reasons are that the topic does not exist
     /// or that no message is available from the topic.
-    async fn receive(&self, topic: UUri) -> Result<UMessage, UStatus> {
+    async fn receive(&self, _topic: UUri) -> Result<UMessage, UStatus> {
         Err(UStatus::fail_with_code(
             UCode::UNIMPLEMENTED,
             "Not implemented",

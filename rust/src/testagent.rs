@@ -21,61 +21,27 @@
  * SPDX-FileCopyrightText: 2023 General Motors GTO LLC
  * SPDX-License-Identifier: Apache-2.0
  */
-use async_std::net;
+
 use async_trait::async_trait;
-use base64::Engine;
-use log::kv::{ToKey, ToValue};
-use prost::bytes::Bytes;
-use prost_types::field;
-use protobuf::reflect::FieldDescriptor;
-use serde::de::DeserializeOwned;
-use serde_json::{map, Value};
-use std::any::{Any, TypeId};
-use std::fmt::Debug;
-use std::future::Future;
-use std::{io::Write /* , net::TcpStream*/};
-use std::{string, usize};
-//use async_std::sync::Mutex;
+use log::kv::ToValue;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use tokio::runtime::Runtime;
-use tokio::sync::mpsc::error;
-use tokio::task::{futures, spawn_local};
-//use up_rust::UAttributes;
-//use up_rust::UTransport;
-use std::io::Read;
-//use std::sync::Arc;
-//use std::collections::HashMap;
-use protobuf::{Message, MessageDyn, SpecialFields};
-//use serde::{Deserialize, Serialize};
 use up_rust::UListener;
-use up_rust::{Data, UAttributes, UCode, UMessage, UMessageType, UStatus, UTransport, UUri};
-use up_rust::{
-    PublishValidator, RequestValidator, ResponseValidator, UAttributesValidator,
-    UAttributesValidators, UriValidator,
-};
+use up_rust::{ UMessage,  UStatus, UTransport};
 
 use std::{
     collections::HashMap,
-    sync::{atomic::AtomicU64, Arc, Mutex},
+    sync::{Arc, Mutex},
 };
 
-use serde::{Deserialize, Serialize};
-//use serde_json::Value;
-//use prost::Message;
-
-#[derive(Debug, Deserialize)]
-struct JsonObj {
-    attributes: Value,
-    payload: Value,
-}
+use serde::Serialize;
 
 use crate::uTransportSocket::UtrasnsportSocket;
 use crate::utils::{
-    base64_to_protobuf_bytes, convert_json_to_jsonstring, protobuf_to_base64, WrapperUMessage,
+     convert_json_to_jsonstring,  WrapperUMessage,
     WrapperUUri,
 };
-use crate::SEND_COMMAND;
+
 
 #[derive(Serialize)]
 pub struct JsonResponseData {
@@ -85,19 +51,6 @@ pub struct JsonResponseData {
 }
 // Define a listener type alias
 
-trait JsonDecoder {}
-
-struct JsonUMessage {
-    uMessage: UMessage,
-}
-struct JsonUURi {
-    uUURI: UUri,
-}
-
-impl JsonDecoder for JsonUMessage {}
-
-//type Listener = Box<dyn Fn(Result<UMessage, UStatus>) + Send + Sync + 'static>;
-//#[derive(Clone)]
 pub struct SocketTestAgent {
     utransport: UtrasnsportSocket,
     clientsocket: Arc<Mutex<TcpStream>>,
@@ -115,11 +68,10 @@ impl UListener for SocketTestAgent {
         };
         json_message.message = msg.clone().to_string().to_value().to_string();
         
-        //<SocketTestAgent as Clone>::clone(&self).send_to_tm(json_message).await;
         <SocketTestAgent as Clone>::clone(&self).send_to_tm(json_message).await;
     }
 
-    async fn on_error(&self, err: UStatus){todo!();}
+    async fn on_error(&self, _err: UStatus){todo!();}
 }
 
 impl Clone for SocketTestAgent {
@@ -141,8 +93,6 @@ impl SocketTestAgent {
     pub async fn new(test_clientsocket: TcpStream, utransport: UtrasnsportSocket) -> Self {
         let socket = Arc::new(Mutex::new(test_clientsocket));
         let clientsocket = socket;
-       // let socket_ulistener = SocketUListner{ agent: Arc::new(Self::clone()) }; 
-
         SocketTestAgent {
             utransport,
             clientsocket,
@@ -202,7 +152,6 @@ impl SocketTestAgent {
                     let u_uuri = wu_uuri.0;
                     self.utransport
                         .register_listener(
-                            // umsg.attributes.source.clone().unwrap(),
                             u_uuri,
                             Arc::clone(&cloned_listener) as Arc<dyn UListener> /*&cloned_listener*/,
                         )
@@ -221,7 +170,6 @@ impl SocketTestAgent {
 
                 _ => Ok({
                     ()
-                    //Box::pin(async { Ok(()) })
                 }), // Modify with appropriate handling
             };
 
@@ -233,13 +181,12 @@ impl SocketTestAgent {
                 .to_string()
                 .to_value()
                 .to_string();
-            // let base64_str = serde_json::to_string(&status).unwrap();
             let _json_message = JsonResponseData {
                 action: "uStatus".to_owned(),
                 message: _status_clone.to_owned(),
                 ue: "rust".to_owned(),
             };
-            <SocketTestAgent as Clone>::clone(&self).send_to_tm(_json_message);
+            <SocketTestAgent as Clone>::clone(&self).send_to_tm(_json_message).await;
         }
     }
 
@@ -248,7 +195,6 @@ impl SocketTestAgent {
 
         //infor TM that rust TA is running
         println!("Sending SDK name to Test Manager!");
-        //let json_message_str = convert_json_to_jsonstring(&json_sdk_name);
         let message = sdk_init.as_bytes();
 
         let socket_clone = self.clientsocket.clone();
@@ -268,7 +214,7 @@ impl SocketTestAgent {
             .expect("error in sending data to TM")
             .write_all(message);
     }
-    fn close_connection(&self) {
+    pub fn close_connection(&self) {
         let _ = self
             .clientsocket
             .lock()
