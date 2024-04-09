@@ -51,21 +51,21 @@ use crate::constants::BYTES_MSG_LENGTH;
 use crate::constants::DISPATCHER_ADDR;
 
 pub trait UtransportExt {
-    async fn socket_init(&mut self);
+     fn socket_init(&mut self);
     fn _handle_publish_message(&mut self, umsg: UMessage );
     fn _handle_request_message(&mut self, umsg: UMessage );
-    async fn read_socket(&mut self, buffer: &mut [u8]) -> io::Result<usize>;
+     fn read_socket(&self, buffer: &mut [u8]) -> io::Result<usize>;
 }
 
 pub struct UtrasnsportSocket {
-    socket: Arc<Mutex<TcpStream>>, //TcpStream,
+   
     socket_sync: TcpStreamSync,
     listner_map: Arc<Mutex<HashMap<String, Vec<Arc<dyn UListener>>>>>,
 }
 impl Clone for UtrasnsportSocket {
     fn clone(&self) -> Self {
         UtrasnsportSocket {
-            socket: self.socket.clone(),
+    
             socket_sync: self
                 .socket_sync
                 .try_clone()
@@ -76,13 +76,13 @@ impl Clone for UtrasnsportSocket {
 }
 
 impl UtrasnsportSocket {
-    pub async fn new() -> Self {
-        let socket_connecton = TcpStream::connect(DISPATCHER_ADDR).await.unwrap();
+    pub  fn new() -> Self {
+        let socket_connecton = TcpStream::connect(DISPATCHER_ADDR);//.unwrap();
         let socket_sync: TcpStreamSync =
             TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
-        let socket = Arc::new(Mutex::new(socket_connecton));
+    
         UtrasnsportSocket {
-            socket,
+    
             socket_sync,
             listner_map: Arc::new(Mutex::new(HashMap::new())),
         }
@@ -90,12 +90,12 @@ impl UtrasnsportSocket {
 }
 
 impl UtransportExt for UtrasnsportSocket {
-    async fn socket_init(&mut self) {
+     fn socket_init(&mut self) {
         loop {
             // Receive data from the socket
             let mut buffer: [u8; BYTES_MSG_LENGTH] = [0; BYTES_MSG_LENGTH];
 
-            let bytes_read = match self.read_socket(&mut buffer).await {
+            let bytes_read = match self.read_socket(&mut buffer) {
                 Ok(bytes_read) => bytes_read,
                 Err(e) => {
                     eprintln!("Socket error: {}", e);
@@ -135,12 +135,13 @@ impl UtransportExt for UtrasnsportSocket {
         }
     }
 
-    async fn read_socket(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
-        let mut socket = self
-            .socket
-            .lock()
-            .expect("error access dispatcher socket connection");
-        socket.read(buffer).await
+     fn read_socket(&self, buffer: &mut [u8]) -> io::Result<usize> {
+       
+
+        let mut socket = &self
+            .socket_sync;
+       
+        socket.read(buffer)//.await
     }
 
     fn _handle_publish_message(&mut self, umsg: UMessage) {

@@ -32,6 +32,8 @@ use std::u32;*/
 
 //use std::simd::u64x1;
 
+use std::thread;
+
 use crate::constants::*;
 use crate::uTransportSocket::UtransportExt;
 //use crate::utils::convert_str_to_bytes;
@@ -114,20 +116,32 @@ fn string_to_json(string_value: &str) -> Value {
 }
 
 fn main() {
-    
-   
-    let transport = UtrasnsportSocket::new();
-    let rt = Runtime::new().unwrap();
-    rt.block_on(async {
-        let test_agent_socket = TcpStream::connect(TEST_MANAGER_ADDR).await.unwrap();
+  let transport = UtrasnsportSocket::new();
 
-        let mut transport_socket = transport.await;
-        transport_socket.socket_init().await;
-        let agent = SocketTestAgent::new(test_agent_socket, transport_socket);
+  let handle = thread::spawn(move || {
+      let rt = Runtime::new().unwrap();
+      rt.block_on(async {
+          let test_agent_socket = TcpStream::connect(TEST_MANAGER_ADDR).await.unwrap();
 
-        agent.await.receive_from_tm().await;
-    });
+          let mut transport_socket = transport;
+          let transport_socket_clone = transport_socket.clone();
+          tokio::task::spawn_blocking(move || {
+            transport_socket.socket_init();
+        }).await.expect("socket_init failed");
+         
+         // let init_handle = tokio::spawn(async move {
+           //   transport_socket.socket_init();
+         // });
+        //  init_handle.unwrap(); // Wait for socket_init() to finish
+          let agent = SocketTestAgent::new(test_agent_socket, transport_socket_clone);
+
+          agent.await.receive_from_tm().await;
+      });
+  });
+
+  handle.join().unwrap();
 }
+
 /* 
 let json_str2 = r#"
   {
