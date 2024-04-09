@@ -29,6 +29,7 @@ use tokio::net::TcpStream;
 use up_rust::UListener;
 use up_rust::{UMessage, UStatus, UTransport};
 
+use std::io::{Read, Write};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -50,7 +51,8 @@ pub struct JsonResponseData {
 
 pub struct SocketTestAgent {
     utransport: UtrasnsportSocket,
-    clientsocket: Arc<Mutex<TcpStream>>,
+   // clientsocket: Arc<Mutex<TcpStream>>,
+   clientsocket: Arc<Mutex<TcpStreamSync>>,
     listner_map: Vec<String>,
 }
 #[async_trait]
@@ -89,7 +91,7 @@ impl Clone for SocketTestAgent {
 }
 
 impl SocketTestAgent {
-    pub async fn new(test_clientsocket: TcpStream, utransport: UtrasnsportSocket) -> Self {
+    pub fn new(test_clientsocket: TcpStreamSync, utransport: UtrasnsportSocket) -> Self {
         let socket = Arc::new(Mutex::new(test_clientsocket));
         let clientsocket = socket;
         SocketTestAgent {
@@ -103,15 +105,19 @@ impl SocketTestAgent {
         // Clone Arc to capture it in the closure
 
         let arc_self = Arc::new(self.clone());
-        <SocketTestAgent as Clone>::clone(&self)
-            .inform_tm_ta_starting()
-            .await;
+        println!("calling *inform_tm_ta_starting");
+        //println("")   ;
+       // self.inform_tm_ta_starting();
+       self.clone().inform_tm_ta_starting();
+       // <SocketTestAgent as Clone>::clone(&self)
+         //   .inform_tm_ta_starting()
+          //  .await;
         let mut socket = self.clientsocket.lock().expect("error accessing TM server");
 
         loop {
             let mut recv_data = [0; 1024];
 
-            let bytes_received = match socket.read(&mut recv_data).await {
+            let bytes_received = match socket.read(&mut recv_data) {
                 Ok(bytes_received) => bytes_received,
                 Err(e) => {
                     // Handle socket errors (e.g., connection closed)
@@ -192,7 +198,7 @@ impl SocketTestAgent {
         self.close_connection();
     }
 
-    async fn inform_tm_ta_starting(self) {
+     fn inform_tm_ta_starting(self) {
         let sdk_init = r#"{"ue":"rust","data":{"SDK_name":"rust"},"action":"initialize"}"#;
 
         //infor TM that rust TA is running
@@ -201,10 +207,12 @@ impl SocketTestAgent {
 
         let socket_clone = self.clientsocket.clone();
         //socket_clone.write_all(message);
-        let _ = socket_clone
+        let  retun_value = socket_clone
             .lock()
             .expect("error in sending data to TM")
             .write_all(message);
+
+            //println!("\n\n retunr value: {:?} \n", retun_value);
     }
 
     async fn send_to_tm(self, json_message: JsonResponseData) {
@@ -217,10 +225,12 @@ impl SocketTestAgent {
             .write_all(message);
     }
     pub fn close_connection(&self) {
-        let _ = self
-            .clientsocket
-            .lock()
-            .expect("error in sending data to TM")
-            .shutdown();
+      //  let _ = self
+       //     .clientsocket
+         //   .lock()
+          //  .expect("error in sending data to TM")
+           // .shutdown(shutdown::Write);
+           todo!();
+           
     }
 }

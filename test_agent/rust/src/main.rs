@@ -48,6 +48,7 @@ mod testagent;
 //use serde_json::{/*map,*/ Value};
 use tokio::net::TcpStream;
 use tokio::runtime::Runtime;
+use std::net::TcpStream as TcpStreamSync;
 
 // Function to recursively convert log::kv::Value to serde_json::Value
 /*fn convert_to_json(value: &log::kv::Value<'_>) -> Value {
@@ -120,17 +121,21 @@ fn main() {
       // Create a new Tokio runtime
       let rt = Runtime::new().unwrap();
 
+
+      let test_agent_socket: TcpStreamSync =
+      TcpStreamSync::connect(TEST_MANAGER_ADDR).expect("issue in connecting  sync socket");
       // Spawn a Tokio task within the runtime
+      
       rt.block_on(async {
           // Spawn a Tokio task to connect to TEST_MANAGER_ADDR asynchronously
-          let test_agent_socket = match TcpStream::connect(TEST_MANAGER_ADDR).await {
+     /*      let test_agent_socket = match TcpStream::connect(TEST_MANAGER_ADDR).await {
               Ok(socket) => socket,
               Err(err) => {
                   eprintln!("Error connecting to TEST_MANAGER_ADDR: {}", err);
                   return;
               }
           };
-
+*/
           println!("Before transport socket");
           let mut transport_socket = UtrasnsportSocket::new();
           let transport_socket_clone = transport_socket.clone();
@@ -152,7 +157,7 @@ fn main() {
 
           println!("After transport socket");
           let agent = SocketTestAgent::new(test_agent_socket, transport_socket_clone);
-          agent.await.receive_from_tm().await;
+          agent.clone().receive_from_tm().await;
       });
   });
 
