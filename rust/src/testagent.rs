@@ -27,7 +27,7 @@ use log::kv::ToValue;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use up_rust::UListener;
-use up_rust::{ UMessage,  UStatus, UTransport};
+use up_rust::{UMessage, UStatus, UTransport};
 
 use std::{
     collections::HashMap,
@@ -37,12 +37,8 @@ use std::{
 use serde::Serialize;
 
 use crate::u_transport_socket::UtrasnsportSocket;
-use crate::utils::{
-     convert_json_to_jsonstring,  WrapperUMessage,
-    WrapperUUri,
-};
+use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
 use crate::*;
-
 
 #[derive(Serialize)]
 pub struct JsonResponseData {
@@ -56,11 +52,10 @@ pub struct SocketTestAgent {
     utransport: UtrasnsportSocket,
     clientsocket: Arc<Mutex<TcpStream>>,
     listner_map: Vec<String>,
-   
 }
 #[async_trait]
 impl UListener for SocketTestAgent {
-    async fn on_receive(&self, msg: UMessage){
+    async fn on_receive(&self, msg: UMessage) {
         println!("Listener onreceived");
         let mut json_message = JsonResponseData {
             action: "onReceive".to_owned(),
@@ -68,11 +63,15 @@ impl UListener for SocketTestAgent {
             ue: "rust".to_string(),
         };
         json_message.message = msg.clone().to_string().to_value().to_string();
-        
-        <SocketTestAgent as Clone>::clone(&self).send_to_tm(json_message).await;
+
+        <SocketTestAgent as Clone>::clone(&self)
+            .send_to_tm(json_message)
+            .await;
     }
 
-    async fn on_error(&self, _err: UStatus){todo!();}
+    async fn on_error(&self, _err: UStatus) {
+        todo!();
+    }
 }
 
 impl Clone for SocketTestAgent {
@@ -81,7 +80,6 @@ impl Clone for SocketTestAgent {
             utransport: self.utransport.clone(), // Assuming UtrasnsportSocket implements Clone
             clientsocket: self.clientsocket.clone(),
             listner_map: self.listner_map.clone(), // Clone Vec<String>
-           
         }
     }
 
@@ -98,7 +96,6 @@ impl SocketTestAgent {
             utransport,
             clientsocket,
             listner_map: Vec::new(),
-         
         }
     }
 
@@ -147,14 +144,14 @@ impl SocketTestAgent {
 
                 REGISTER_LISTENER_COMMAND => {
                     let cloned_listener = Arc::clone(&arc_self);
-             
+
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                     println!("\n\n Send UUri received from TM: {:?} \n", wu_uuri);
                     let u_uuri = wu_uuri.0;
                     self.utransport
                         .register_listener(
                             u_uuri,
-                            Arc::clone(&cloned_listener) as Arc<dyn UListener> /*&cloned_listener*/,
+                            Arc::clone(&cloned_listener) as Arc<dyn UListener>, /*&cloned_listener*/
                         )
                         .await
                 } // Assuming listener can be cloned
@@ -165,13 +162,14 @@ impl SocketTestAgent {
                     println!("\n\n Send UUri received from TM: {:?} \n", wu_uuri);
                     let u_uuri = wu_uuri.0;
                     self.utransport
-                        .unregister_listener(u_uuri,Arc::clone(&cloned_listener) as Arc<dyn UListener> /*&cloned_listener*/)
+                        .unregister_listener(
+                            u_uuri,
+                            Arc::clone(&cloned_listener) as Arc<dyn UListener>, /*&cloned_listener*/
+                        )
                         .await
                 } // Assuming listener can be cloned
 
-                _ => Ok({
-                    ()
-                }), // Modify with appropriate handling
+                _ => Ok({ () }), // Modify with appropriate handling
             };
 
             let _status_clone = status
@@ -187,7 +185,9 @@ impl SocketTestAgent {
                 message: _status_clone.to_owned(),
                 ue: "rust".to_owned(),
             };
-            <SocketTestAgent as Clone>::clone(&self).send_to_tm(_json_message).await;
+            <SocketTestAgent as Clone>::clone(&self)
+                .send_to_tm(_json_message)
+                .await;
         }
         self.close_connection();
     }

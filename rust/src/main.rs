@@ -103,7 +103,7 @@ fn string_to_json(data: &str) -> Result<Value, serde_json::Error> {
     // Convert map to final JSON value
     Ok(Value::Object(map))
 }*/
-/* 
+/*
 fn string_to_json(string_value: &str) -> Value {
     // Replace spaces with commas to make it valid JSON syntax
     let string_value = string_value.replace(" ", ", ");
@@ -116,35 +116,35 @@ fn string_to_json(string_value: &str) -> Value {
 }*/
 
 fn main() {
-  let transport = UtrasnsportSocket::new();
+    let transport = UtrasnsportSocket::new();
 
-  let handle = thread::spawn(move || {
-      let rt = Runtime::new().unwrap();
-      rt.block_on(async {
-          let test_agent_socket = TcpStream::connect(TEST_MANAGER_ADDR).await.unwrap();
+    let handle = thread::spawn(move || {
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async {
+            let test_agent_socket = TcpStream::connect(TEST_MANAGER_ADDR).await.unwrap();
 
-          let mut transport_socket = transport;
-          let transport_socket_clone = transport_socket.clone();
-          tokio::task::spawn_blocking(move || {
-            transport_socket.socket_init();
-        }).await.expect("socket_init failed");
-         
-         // let init_handle = tokio::spawn(async move {
-           //   transport_socket.socket_init();
-         // });
-        //  init_handle.unwrap(); // Wait for socket_init() to finish
-          let agent = SocketTestAgent::new(test_agent_socket, transport_socket_clone);
+            let mut transport_socket = transport;
+            let transport_socket_clone = transport_socket.clone();
+            tokio::task::spawn_blocking(move || {
+                transport_socket.socket_init();
+            })
+            .await
+            .expect("socket_init failed");
 
-          agent.await.receive_from_tm().await;
-      
-      });
-      
-  });
+            // let init_handle = tokio::spawn(async move {
+            //   transport_socket.socket_init();
+            // });
+            //  init_handle.unwrap(); // Wait for socket_init() to finish
+            let agent = SocketTestAgent::new(test_agent_socket, transport_socket_clone);
 
-  handle.join().unwrap();
+            agent.await.receive_from_tm().await;
+        });
+    });
+
+    handle.join().unwrap();
 }
 
-/* 
+/*
 let json_str2 = r#"
   {
     "attributes": {

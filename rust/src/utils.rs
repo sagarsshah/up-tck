@@ -28,17 +28,15 @@ use serde_json::Value;
 use serde::{Deserialize, Deserializer};
 //use std::io::Read;
 use up_rust::{
-    Data, UAttributes, UAuthority, UCode, UEntity, UMessage, UMessageType, UPayload, UPayloadFormat, UPriority, UResource, UUri, UUID
+    Data, UAttributes, UAuthority, UCode, UEntity, UMessage, UMessageType, UPayload,
+    UPayloadFormat, UPriority, UResource, UUri, UUID,
 };
 
 use protobuf::{MessageField, SpecialFields};
 
-
-
 pub fn convert_json_to_jsonstring<T: serde::Serialize>(value: &T) -> String {
     serde_json::to_string(value).expect("Failed to convert to JSON string")
 }
-
 
 #[derive(Debug, Default)]
 pub struct WrapperUUri(pub UUri);
@@ -58,7 +56,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             Some(_authority_name) => _authority_name.as_str(),
             None => Some("default"),
         };
-        
+
         let _authority_number_ip = match value
             .get("authority")
             .and_then(|authority| authority.get("number"))
@@ -204,27 +202,26 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         let value: Value = Deserialize::deserialize(deserializer)?;
         println!("WrapperUAttribute: {:?}", value);
         // Conversion function from string to enum variant
-        fn from_str_comstatus(s: &str) -> UCode{
+        fn from_str_comstatus(s: &str) -> UCode {
             match s {
-               "ABORTED" => UCode::ABORTED,
-               "OK"=> UCode::OK,
+                "ABORTED" => UCode::ABORTED,
+                "OK" => UCode::OK,
                 "CANCELLED" => UCode::CANCELLED,
-                "UNKOWN" =>UCode::UNKNOWN,
-                "INVALID_ARGUMENT"=>UCode::INVALID_ARGUMENT,
-                "DEADLINE_EXCEEDED"=>UCode::DEADLINE_EXCEEDED,
-                "NOT_FOUND"=>UCode::NOT_FOUND,
-                "ALREADY_EXISTS"=>UCode::ALREADY_EXISTS,
-                "PERMISSION_DENIED"=>UCode::PERMISSION_DENIED,
-                "UNAUTHENTICATED"=>UCode::UNAUTHENTICATED,
-                "RESOURCE_EXHAUSTED"=>UCode::RESOURCE_EXHAUSTED,
-                "FAILED_PRECONDITION"=>UCode::FAILED_PRECONDITION,
-                "OUT_OF_RANGE"=>UCode::OUT_OF_RANGE,
-                "UNIMPLEMENTED"=>UCode::UNIMPLEMENTED,
-                "INTERNAL"=>UCode::INTERNAL,
-                "UNAVAILABLE"=>UCode::UNAVAILABLE,
-                "DATA_LOSS"=>UCode::DATA_LOSS,
+                "UNKOWN" => UCode::UNKNOWN,
+                "INVALID_ARGUMENT" => UCode::INVALID_ARGUMENT,
+                "DEADLINE_EXCEEDED" => UCode::DEADLINE_EXCEEDED,
+                "NOT_FOUND" => UCode::NOT_FOUND,
+                "ALREADY_EXISTS" => UCode::ALREADY_EXISTS,
+                "PERMISSION_DENIED" => UCode::PERMISSION_DENIED,
+                "UNAUTHENTICATED" => UCode::UNAUTHENTICATED,
+                "RESOURCE_EXHAUSTED" => UCode::RESOURCE_EXHAUSTED,
+                "FAILED_PRECONDITION" => UCode::FAILED_PRECONDITION,
+                "OUT_OF_RANGE" => UCode::OUT_OF_RANGE,
+                "UNIMPLEMENTED" => UCode::UNIMPLEMENTED,
+                "INTERNAL" => UCode::INTERNAL,
+                "UNAVAILABLE" => UCode::UNAVAILABLE,
+                "DATA_LOSS" => UCode::DATA_LOSS,
                 &_ => todo!(),
-
             }
         }
         fn from_str_priority(s: &str) -> UPriority {
@@ -335,7 +332,6 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         };
 
         let _commstatus = match value.get("commstatus") {
-            
             Some(_commstatus) => from_str_comstatus(
                 _commstatus
                     .as_str()
@@ -507,11 +503,8 @@ impl<'de> Deserialize<'de> for WrapperUMessage {
 
 #[cfg(test)]
 mod tests {
-  
+
     use super::*;
-  
-  
-   
 
     #[test]
     fn test_convert_json_to_jsonstring() {
@@ -519,7 +512,6 @@ mod tests {
         let result = convert_json_to_jsonstring(&json);
         assert_eq!(result, r#"{"key":"value"}"#);
     }
-
 
     // Write more test cases for other functions...
 }

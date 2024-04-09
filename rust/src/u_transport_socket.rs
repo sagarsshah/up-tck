@@ -25,10 +25,8 @@
 use async_std::io;
 use async_trait::async_trait;
 use up_rust::UListener;
+use up_rust::{UAttributesValidators, UriValidator};
 use up_rust::{UCode, UMessage, UMessageType, UStatus, UTransport, UUri};
-use up_rust::{
-    UAttributesValidators, UriValidator,
-};
 
 use protobuf::Message;
 use std::net::TcpStream as TcpStreamSync;
@@ -46,21 +44,19 @@ use crate::constants::BYTES_MSG_LENGTH;
 use crate::constants::DISPATCHER_ADDR;
 
 pub trait UtransportExt {
-     fn socket_init(&mut self);
-    fn _handle_publish_message(&mut self, umsg: UMessage );
-    fn _handle_request_message(&mut self, umsg: UMessage );
-     fn read_socket(&self, buffer: &mut [u8]) -> io::Result<usize>;
+    fn socket_init(&mut self);
+    fn _handle_publish_message(&mut self, umsg: UMessage);
+    fn _handle_request_message(&mut self, umsg: UMessage);
+    fn read_socket(&self, buffer: &mut [u8]) -> io::Result<usize>;
 }
 
 pub struct UtrasnsportSocket {
-   
     socket_sync: TcpStreamSync,
     listner_map: Arc<Mutex<HashMap<String, Vec<Arc<dyn UListener>>>>>,
 }
 impl Clone for UtrasnsportSocket {
     fn clone(&self) -> Self {
         UtrasnsportSocket {
-    
             socket_sync: self
                 .socket_sync
                 .try_clone()
@@ -71,13 +67,12 @@ impl Clone for UtrasnsportSocket {
 }
 
 impl UtrasnsportSocket {
-    pub  fn new() -> Self {
-       // let _socket_connecton = TcpStream::connect(DISPATCHER_ADDR);//.unwrap();
+    pub fn new() -> Self {
+        // let _socket_connecton = TcpStream::connect(DISPATCHER_ADDR);//.unwrap();
         let socket_sync: TcpStreamSync =
             TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
-    
+
         UtrasnsportSocket {
-    
             socket_sync,
             listner_map: Arc::new(Mutex::new(HashMap::new())),
         }
@@ -85,7 +80,7 @@ impl UtrasnsportSocket {
 }
 
 impl UtransportExt for UtrasnsportSocket {
-     fn socket_init(&mut self) {
+    fn socket_init(&mut self) {
         loop {
             // Receive data from the socket
             let mut buffer: [u8; BYTES_MSG_LENGTH] = [0; BYTES_MSG_LENGTH];
@@ -113,7 +108,7 @@ impl UtransportExt for UtrasnsportSocket {
 
             match umessage.attributes.type_.enum_value() {
                 Ok(mt) => match mt {
-                    UMessageType::UMESSAGE_TYPE_PUBLISH  => {
+                    UMessageType::UMESSAGE_TYPE_PUBLISH => {
                         self._handle_publish_message(umessage);
                         // Ok(())
                         ()
@@ -121,27 +116,24 @@ impl UtransportExt for UtrasnsportSocket {
                     UMessageType::UMESSAGE_TYPE_NOTIFICATION => todo!(),
                     UMessageType::UMESSAGE_TYPE_UNSPECIFIED => (), //Err("Umessage type unspecified".to_string()),
                     UMessageType::UMESSAGE_TYPE_RESPONSE => (),
-                    UMessageType::UMESSAGE_TYPE_REQUEST => {self._handle_request_message(umessage);
-                    // Ok(())
-                    ()} //Err("umessage type reponse not implemented".to_string()),
+                    UMessageType::UMESSAGE_TYPE_REQUEST => {
+                        self._handle_request_message(umessage);
+                        // Ok(())
+                        ()
+                    } //Err("umessage type reponse not implemented".to_string()),
                 },
                 Err(_) => (), //Err("invalid arguments".to_string()),
             }
         }
     }
 
-     fn read_socket(&self, buffer: &mut [u8]) -> io::Result<usize> {
-       
+    fn read_socket(&self, buffer: &mut [u8]) -> io::Result<usize> {
+        let mut socket = &self.socket_sync;
 
-        let mut socket = &self
-            .socket_sync;
-       
-        socket.read(buffer)//.await
+        socket.read(buffer) //.await
     }
 
     fn _handle_publish_message(&mut self, umsg: UMessage) {
-
-    
         if let Some(listner_array) = self
             .listner_map
             .lock()
@@ -154,11 +146,7 @@ impl UtransportExt for UtrasnsportSocket {
         }
     }
 
-    fn _handle_request_message(&mut self, umsg: UMessage ) {
-        
-
-
-    
+    fn _handle_request_message(&mut self, umsg: UMessage) {
         if let Some(listner_array) = self
             .listner_map
             .lock()
@@ -214,9 +202,6 @@ impl UTransport for UtrasnsportSocket {
             .enum_value()
             .map_err(|_| UStatus::fail_with_code(UCode::INTERNAL, "Unable to parse type"))?
         {
-           
-           
-           
             UMessageType::UMESSAGE_TYPE_PUBLISH => {
                 // PublishValidator::validate(, &attributes) /* .map(|e|{ UStatus::fail_with_code(UCode::INVALID_ARGUMENT,format!("wrong Publish Uattribute{e:?}"),})?;*/
                 UAttributesValidators::Publish
@@ -248,9 +233,6 @@ impl UTransport for UtrasnsportSocket {
                         )
                     })?;
 
-
-
-                    
                 match socket_clone.write_all(&umsg_serialized) {
                     Ok(_) => Err(UStatus::ok()),
                     Err(_) => Err(UStatus::fail_with_code(
@@ -280,14 +262,10 @@ impl UTransport for UtrasnsportSocket {
             UMessageType::UMESSAGE_TYPE_UNSPECIFIED => Err(UStatus::fail_with_code(
                 UCode::INVALID_ARGUMENT,
                 "Wrong Message type in UAttributes",
-               
-    
             )),
             UMessageType::UMESSAGE_TYPE_NOTIFICATION => Err(UStatus::fail_with_code(
                 UCode::INVALID_ARGUMENT,
                 "Wrong Message type in UAttributes",
-               
-    
             )),
         }
     }
@@ -326,16 +304,14 @@ impl UTransport for UtrasnsportSocket {
     ///
     ///
     ///
-    /// 
-    /// 
+    ///
+    ///
 
     async fn register_listener(
         &self,
         topic: UUri,
         listener: Arc<dyn UListener>,
-    ) -> Result<(), UStatus>
-    
-    {
+    ) -> Result<(), UStatus> {
         //let listener = Arc::new(listener);
         // self.listner_map.lock().unwrap().insert(topic.to_string(),listener);
         if topic.authority.is_some() && topic.entity.is_none() && topic.resource.is_none() {
@@ -396,8 +372,7 @@ impl UTransport for UtrasnsportSocket {
         &self,
         topic: UUri,
         listener: Arc<dyn UListener>,
-    ) -> Result<(), UStatus>
-    {
+    ) -> Result<(), UStatus> {
         let mut map = self.listner_map.lock().expect("Failed to acquire lock");
         let listner_clone = Arc::clone(&listener) as Arc<dyn UListener>;
 
