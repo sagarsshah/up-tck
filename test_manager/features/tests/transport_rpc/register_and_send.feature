@@ -55,6 +55,13 @@ Feature: Testing Publish and Subscribe Functionality
 
     Examples:
       | uE1    | uE2    |
+      | python | rust   |
+      | rust   | python |
+      | java   | rust   |
+      | rust   | java   |
+      | rust   | rust   |
+      | java   | python |
+      | python | java   |
       | python | python |
       | java   | java   |
       | java   | python |
