@@ -28,7 +28,7 @@ use up_rust::UListener;
 use up_rust::{UAttributesValidators, UriValidator};
 use up_rust::{UCode, UMessage, UMessageType, UStatus, UTransport, UUri};
 
-use protobuf::Message;
+use protobuf::{Message, SpecialFields};
 use std::net::TcpStream as TcpStreamSync;
 use std::{
     collections::HashMap,
@@ -394,7 +394,7 @@ impl UTransport for UtrasnsportSocket {
             code: up_rust::UCode::OK.into(),
             message: Some("OK".to_string()), // Convert &str to String and wrap it into Some
             details: todo!(),
-            special_fields: todo!(),
+            special_fields: SpecialFields::default(),
         })
         //UStatus { code: up_rust::UCode::OK, message: "OK", details: todo!(), special_fields: todo!() }
     }
