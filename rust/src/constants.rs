@@ -26,6 +26,13 @@ pub const REGISTER_LISTENER_COMMAND: &str = "registerlistener";
 pub const UNREGISTER_LISTENER_COMMAND: &str = "unregisterlistener";
 pub const INVOKE_METHOD_COMMAND: &str = "invokemethod";
 
+pub const RESPONSE_ON_RECEIVE: &str  = "onreceive";
+pub const RESPONSE_RPC:  &str = "rpcresponse";
+pub const SERIALIZE_URI: &str = "uri_serialize";
+pub const DESERIALIZE_URI: &str = "uri_deserialize";
+pub const SERIALIZE_UUID: &str = "uuid_serialize";
+pub const DESERIALIZE_UUID: &str = "uuid_deserialize";
+
 // Define constants for addresses
 pub const DISPATCHER_ADDR: (&str, u16) = ("127.0.0.1", 44444);
 pub const TEST_MANAGER_ADDR: (&str, u16) = ("127.0.0.5", 12345);

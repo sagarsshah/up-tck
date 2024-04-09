@@ -41,6 +41,7 @@ use crate::utils::{
      convert_json_to_jsonstring,  WrapperUMessage,
     WrapperUUri,
 };
+use crate::*;
 
 
 #[derive(Serialize)]
@@ -135,7 +136,7 @@ impl SocketTestAgent {
             println!("json data received: {:?}", json_data_value);
 
             let status = match action.as_str() {
-                "SEND_COMMAND" => {
+                SEND_COMMAND => {
                     let wu_message: WrapperUMessage =
                         serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                     println!("\n\n Send UMessage received from TM: {:?} \n", wu_message);
@@ -144,7 +145,7 @@ impl SocketTestAgent {
                     self.utransport.send(u_message).await
                 }
 
-                "REGISTER_LISTENER_COMMAND" => {
+                REGISTER_LISTENER_COMMAND => {
                     let cloned_listener = Arc::clone(&arc_self);
              
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
@@ -158,7 +159,7 @@ impl SocketTestAgent {
                         .await
                 } // Assuming listener can be cloned
 
-                "UNREGISTER_LISTENER_COMMAND" => {
+                UNREGISTER_LISTENER_COMMAND => {
                     let cloned_listener = Arc::clone(&arc_self);
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                     println!("\n\n Send UUri received from TM: {:?} \n", wu_uuri);
@@ -188,6 +189,7 @@ impl SocketTestAgent {
             };
             <SocketTestAgent as Clone>::clone(&self).send_to_tm(_json_message).await;
         }
+        self.close_connection();
     }
 
     async fn inform_tm_ta_starting(self) {

@@ -136,7 +136,9 @@ fn main() {
           let agent = SocketTestAgent::new(test_agent_socket, transport_socket_clone);
 
           agent.await.receive_from_tm().await;
+      
       });
+      
   });
 
   handle.join().unwrap();
