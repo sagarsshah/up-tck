@@ -24,6 +24,7 @@
 
 use async_trait::async_trait;
 use log::kv::ToValue;
+use serde_json::Value;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use up_rust::UListener;
@@ -53,6 +54,7 @@ pub struct SocketTestAgent {
     utransport: UtrasnsportSocket,
    // clientsocket: Arc<Mutex<TcpStream>>,
    clientsocket: Arc<Mutex<TcpStreamSync>>,
+   //clientsocket_clone: Arc<Mutex<TcpStreamSync>>,
     listner_map: Vec<String>,
 }
 #[async_trait]
@@ -81,6 +83,7 @@ impl Clone for SocketTestAgent {
         SocketTestAgent {
             utransport: self.utransport.clone(), // Assuming UtrasnsportSocket implements Clone
             clientsocket: self.clientsocket.clone(),
+           // clientsocket_clone:self.clientsocket.clone(),
             listner_map: self.listner_map.clone(), // Clone Vec<String>
         }
     }
@@ -94,9 +97,11 @@ impl SocketTestAgent {
     pub fn new(test_clientsocket: TcpStreamSync, utransport: UtrasnsportSocket) -> Self {
         let socket = Arc::new(Mutex::new(test_clientsocket));
         let clientsocket = socket;
+     //   let clientsocket_clone = clientsocket.clone();
         SocketTestAgent {
             utransport,
             clientsocket,
+        //    clientsocket_clone,
             listner_map: Vec::new(),
         }
     }
@@ -115,7 +120,7 @@ impl SocketTestAgent {
         let mut socket = self.clientsocket.lock().expect("error accessing TM server");
 
         loop {
-            let mut recv_data = [0; 1024];
+            let mut recv_data = [0; 2048];
 
             let bytes_received = match socket.read(&mut recv_data) {
                 Ok(bytes_received) => bytes_received,
@@ -125,20 +130,30 @@ impl SocketTestAgent {
                     break;
                 }
             };
+            println!("received data from TM 1{}", bytes_received);
             // Check if no data is received
             if bytes_received == 0 {
                 continue;
             }
+            println!("received data from TM 2");
 
             let recv_data_str: std::borrow::Cow<'_, str> =
                 String::from_utf8_lossy(&recv_data[..bytes_received]);
-            let json_msg: HashMap<String, String> = serde_json::from_str(&recv_data_str).unwrap(); // Assuming serde_json is used for JSON serialization/deserialization
+                println!("received data from TM 2 {}",recv_data_str);
+            let json_msg: Value = serde_json::from_str(&recv_data_str.to_string()).unwrap(); // Assuming serde_json is used for JSON serialization/deserialization
             let action = json_msg["action"].clone();
-            let json_data_string = json_msg["data"].clone();
-            let json_data_value = serde_json::from_str(&json_data_string).unwrap();
+            let json_data_value = json_msg["data"].clone();
+         //   let json_data_value = serde_json::from_str(&json_data_string).unwrap();
             println!("json data received: {:?}", json_data_value);
+             
+           // let json_string = action.to_string();
+           // println!("json data action: {:?}", json_string);
+            
+            
+let json_str_ref = action.as_str().expect("issue in converting value to string");
+println!("json data json_str_ref: {:?}", json_str_ref);
 
-            let status = match action.as_str() {
+            let status = match json_str_ref {
                 SEND_COMMAND => {
                     let wu_message: WrapperUMessage =
                         serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
@@ -177,7 +192,11 @@ impl SocketTestAgent {
 
                 _ => Ok({ () }), // Modify with appropriate handling
             };
-
+  
+            match status.clone() {
+                Ok(_) => println!("status: Ok"),
+                Err(err) => println!("status: Error: {:?}", err),
+            }
             let _status_clone = status
                 .clone()
                 .to_owned()
@@ -216,13 +235,29 @@ impl SocketTestAgent {
     }
 
     async fn send_to_tm(self, json_message: JsonResponseData) {
+
+        println!("sending status to TM ");
         let json_message_str = convert_json_to_jsonstring(&json_message);
+        println!("sending status to TM message {}",json_message_str);
         let message = json_message_str.as_bytes();
+        println!("sending status to TM 2 ");
         let socket_clone = self.clientsocket.clone();
-        let _ = socket_clone
-            .lock()
+        println!("sending status to TM 3 ");
+          // Lock the mutex to access the TcpStream
+    //let locked_socket = socket_clone.lock().expect("Failed to lock mutex");
+
+
+    // Retrieve the peer address of the TcpStream
+    //let peer_addr = locked_socket.peer_addr().expect("Failed to get peer address");
+    println!("sending status to TM 4 ");
+    //println!("peer addr {}",peer_addr);
+        let result = socket_clone
+            .try_lock()
             .expect("error in sending data to TM")
             .write_all(message);
+        println!("sending status to TM done");
+
+       // println!("result {}", result);
     }
     pub fn close_connection(&self) {
       //  let _ = self

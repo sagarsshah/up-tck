@@ -314,6 +314,7 @@ impl UTransport for UtrasnsportSocket {
     ) -> Result<(), UStatus> {
         //let listener = Arc::new(listener);
         // self.listner_map.lock().unwrap().insert(topic.to_string(),listener);
+        println!("register listner called !");
         if topic.authority.is_some() && topic.entity.is_none() && topic.resource.is_none() {
             // This is special UUri which means we need to register for all of Publish, Request, and Response
             // RPC response
@@ -343,6 +344,7 @@ impl UTransport for UtrasnsportSocket {
                     .entry(topic.to_string())
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
+                println!("register listner called for rpc !");
                 Ok(/*"register listner successful".to_string*/ ())
             } else {
                 self.listner_map
@@ -351,7 +353,9 @@ impl UTransport for UtrasnsportSocket {
                     .entry(topic.to_string())
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
-                Ok(/*"register listner successful".to_string()*/ ())
+                println!("register listner called for topic !");
+                //Ok(/*"register listner successful".to_string()*/ ())
+                Err(UStatus::ok())
             }
         }
     }
