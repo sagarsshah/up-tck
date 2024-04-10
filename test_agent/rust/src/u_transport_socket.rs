@@ -394,12 +394,7 @@ impl UTransport for UtrasnsportSocket {
             }
         }
 
-        Err(UStatus {
-            code: up_rust::UCode::OK.into(),
-            message: Some("OK".to_string()), // Convert &str to String and wrap it into Some
-            details: todo!(),
-            special_fields: SpecialFields::default(),
-        })
+        Err(UStatus::ok())
         //UStatus { code: up_rust::UCode::OK, message: "OK", details: todo!(), special_fields: todo!() }
     }
 }

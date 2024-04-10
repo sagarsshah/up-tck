@@ -110,9 +110,9 @@ def before_all(context):
     process: subprocess.Popen = create_subprocess(command)
     context.java_ta_process = process
 
-    # command = create_command(RUST_TA_PATH)
-    # process: subprocess.Popen = create_subprocess(command)
-    # context.rust_ta_process = process
+    command = create_command(RUST_TA_PATH)
+    process: subprocess.Popen = create_subprocess(command)
+    context.rust_ta_process = process
 
     context.logger.info("Created All Test Agents...")
 
