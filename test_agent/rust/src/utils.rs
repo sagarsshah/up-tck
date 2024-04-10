@@ -22,6 +22,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+use log::kv::{value, ToValue};
 //use crate::constants::*;
 use serde_json::Value;
 //use serde::{Serialize, Deserialize};
@@ -442,8 +443,11 @@ impl<'de> Deserialize<'de> for WrapperUPayload {
             None => 0,
         };
 
-        let _data = match value.get("data") {
-            Some(_data) => Data::Reference(_data.to_string().parse().unwrap()),
+        
+         
+        let _data = match value.get("value") {
+            //Some(_data) => Data::Reference(_data.to_string().parse().unwrap()),
+            Some(_data) => Data::Value( serde_json::to_vec(_data).expect("error in converting data value to vector")),
             None => Data::Reference(0),
         };
 
@@ -488,8 +492,9 @@ impl<'de> Deserialize<'de> for WrapperUMessage {
         };
 
         let mattribute = MessageField::from_option(Some(wattributes.0));
+        println!("mattribute: {:?} \n", mattribute);
         let mpayload = MessageField::from_option(Some(wpayload.0));
-
+        println!("mpayload: {:?} \n", mpayload);
         // special field //todo
         let _special_fields = SpecialFields::default();
 

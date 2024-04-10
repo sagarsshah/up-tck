@@ -109,6 +109,22 @@ impl SocketTestAgent {
         }
     }
 
+
+    fn sanitize_input_string(self, input: &str) -> String {
+        input.chars()
+            .map(|c| {
+                match c {
+                    '\x00'..='\x1F' => self.clone().escape_control_character(c),
+                    _ => c.to_string(),
+                }
+            })
+            .collect()
+    }
+     
+    fn escape_control_character(self,c: char) -> String {
+        let escaped = format!("\\u{:04x}", c as u32);
+        escaped
+    }
     pub async fn receive_from_tm(&mut self) {
         // Clone Arc to capture it in the closure
 
@@ -133,7 +149,7 @@ impl SocketTestAgent {
                     break;
                 }
             };
-            println!("received data from TM 1{}", bytes_received);
+          //  println!("received data from TM 1{}", bytes_received);
             // Check if no data is received
             if bytes_received == 0 {
                 continue;
@@ -143,7 +159,10 @@ impl SocketTestAgent {
             let recv_data_str: std::borrow::Cow<'_, str> =
                 String::from_utf8_lossy(&recv_data[..bytes_received]);
                 println!("received data from TM 2 {}",recv_data_str);
-            let json_msg: Value = serde_json::from_str(&recv_data_str.to_string()).unwrap(); // Assuming serde_json is used for JSON serialization/deserialization
+                let cleaned_json_string = self.clone().sanitize_input_string(&recv_data_str).replace("BYTES:", "");
+               // let cleaned_json_string = recv_data_str.chars().filter(|&c| c >= ' ' || c == '\t' || c == '\n' || c == '\r').collect::<String>();
+                println!("received data from TM 2.1 {}",cleaned_json_string);
+            let json_msg: Value = serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
          //   let json_data_value = serde_json::from_str(&json_data_string).unwrap();
@@ -160,7 +179,7 @@ println!("json data json_str_ref: {:?}", json_str_ref);
                 SEND_COMMAND => {
                     let wu_message: WrapperUMessage =
                         serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
-                    println!("\n\n Send UMessage received from TM: {:?} \n", wu_message);
+                    println!("\n\n Send UMessage received from TM: {:?} \n", wu_message.0);
                     let u_message = wu_message.0;
 
                     self.utransport.send(u_message).await
