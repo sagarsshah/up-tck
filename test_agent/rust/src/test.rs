@@ -66,7 +66,7 @@ impl JsonDecoder for JsonUMessage{
             },
             _ => {
                 // Handle unknown key or error condition
-                println!("Unknown key: {}", key);
+                dbg!("Unknown key: {}", key);
             }
         }
     }

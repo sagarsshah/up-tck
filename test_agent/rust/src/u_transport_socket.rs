@@ -88,7 +88,7 @@ impl UtransportExt for UtrasnsportSocket {
             let bytes_read = match self.read_socket(&mut buffer) {
                 Ok(bytes_read) => bytes_read,
                 Err(e) => {
-                    eprintln!("Socket error: {}", e);
+                    dbg!("Socket error: {}", e);
                     break;
                 }
             };
@@ -101,7 +101,7 @@ impl UtransportExt for UtrasnsportSocket {
             let mut umessage = UMessage::new(); // Assuming UMessage is a protobuf-generated message type
 
             if let Err(err) = umessage.merge_from_bytes(&buffer) {
-                eprintln!("Error deserializing UMessage: {}", err);
+                dbg!("Error deserializing UMessage: {}", err);
             } else {
                 eprint!("data seems to be correct!");
             }
@@ -314,7 +314,7 @@ impl UTransport for UtrasnsportSocket {
     ) -> Result<(), UStatus> {
         //let listener = Arc::new(listener);
         // self.listner_map.lock().unwrap().insert(topic.to_string(),listener);
-        println!("register listner called !");
+        dbg!("register listner called !");
         if topic.authority.is_some() && topic.entity.is_none() && topic.resource.is_none() {
             // This is special UUri which means we need to register for all of Publish, Request, and Response
             // RPC response
@@ -344,7 +344,7 @@ impl UTransport for UtrasnsportSocket {
                     .entry(topic.to_string())
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
-                println!("register listner called for rpc !");
+                dbg!("register listner called for rpc !");
                 Ok(/*"register listner successful".to_string*/ ())
             } else {
                 self.listner_map
@@ -353,7 +353,7 @@ impl UTransport for UtrasnsportSocket {
                     .entry(topic.to_string())
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
-                println!("register listner called for topic !");
+                dbg!("register listner called for topic !");
                 //Ok(/*"register listner successful".to_string()*/ ())
                 Err(UStatus::ok())
             }

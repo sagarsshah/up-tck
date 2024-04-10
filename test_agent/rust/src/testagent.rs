@@ -60,7 +60,7 @@ pub struct SocketTestAgent {
 #[async_trait]
 impl UListener for SocketTestAgent {
     async fn on_receive(&self, msg: UMessage) {
-        println!("Listener onreceived");
+        dbg!("Listener onreceived");
         let mut json_message = JsonResponseData {
             action: "onReceive".to_owned(),
             message: "None".to_string(),
@@ -129,7 +129,7 @@ impl SocketTestAgent {
         // Clone Arc to capture it in the closure
 
         let arc_self = Arc::new(self.clone());
-        println!("calling *inform_tm_ta_starting");
+       // dbg!("calling *inform_tm_ta_starting");
         //println("")   ;
        // self.inform_tm_ta_starting();
        self.clone().inform_tm_ta_starting();
@@ -145,41 +145,41 @@ impl SocketTestAgent {
                 Ok(bytes_received) => bytes_received,
                 Err(e) => {
                     // Handle socket errors (e.g., connection closed)
-                    eprintln!("Socket error: {}", e);
+                    dbg!("Socket error: {}", e);
                     break;
                 }
             };
-          //  println!("received data from TM 1{}", bytes_received);
+          //  dbg!("received data from TM 1{}", bytes_received);
             // Check if no data is received
             if bytes_received == 0 {
                 continue;
             }
-            println!("received data from TM 2");
+            //dbg!("received data from TM 2");
 
             let recv_data_str: std::borrow::Cow<'_, str> =
                 String::from_utf8_lossy(&recv_data[..bytes_received]);
-                println!("received data from TM 2 {}",recv_data_str);
+              //  dbg!("received data from TM 2 {}",recv_data_str);
                 let cleaned_json_string = self.clone().sanitize_input_string(&recv_data_str).replace("BYTES:", "");
                // let cleaned_json_string = recv_data_str.chars().filter(|&c| c >= ' ' || c == '\t' || c == '\n' || c == '\r').collect::<String>();
-                println!("received data from TM 2.1 {}",cleaned_json_string);
+              //  dbg!("received data from TM 2.1 {}",cleaned_json_string);
             let json_msg: Value = serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
          //   let json_data_value = serde_json::from_str(&json_data_string).unwrap();
-            println!("json data received: {:?}", json_data_value);
+           // dbg!("json data received: {:?}", json_data_value);
              
            // let json_string = action.to_string();
-           // println!("json data action: {:?}", json_string);
+           // dbg!("json data action: {:?}", json_string);
             
             
 let json_str_ref = action.as_str().expect("issue in converting value to string");
-println!("json data json_str_ref: {:?}", json_str_ref);
+dbg!("json data json_str_ref: {:?}", json_str_ref);
 
             let status = match json_str_ref {
                 SEND_COMMAND => {
                     let wu_message: WrapperUMessage =
                         serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
-                    println!("\n\n Send UMessage received from TM: {:?} \n", wu_message.0);
+                        dbg!( wu_message.0.clone());
                     let u_message = wu_message.0;
 
                     self.utransport.send(u_message).await
@@ -189,7 +189,7 @@ println!("json data json_str_ref: {:?}", json_str_ref);
                     let cloned_listener = Arc::clone(&arc_self);
 
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
-                    println!("\n\n Send UUri received from TM: {:?} \n", wu_uuri);
+                    dbg!( wu_uuri.0.clone());
                     let u_uuri = wu_uuri.0;
                     self.utransport
                         .register_listener(
@@ -202,7 +202,7 @@ println!("json data json_str_ref: {:?}", json_str_ref);
                 UNREGISTER_LISTENER_COMMAND => {
                     let cloned_listener = Arc::clone(&arc_self);
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
-                    println!("\n\n Send UUri received from TM: {:?} \n", wu_uuri);
+                    dbg!( wu_uuri.0.clone());
                     let u_uuri = wu_uuri.0;
                     self.utransport
                         .unregister_listener(
@@ -246,7 +246,7 @@ println!("json data json_str_ref: {:?}", json_str_ref);
         let sdk_init = r#"{"ue":"rust","data":{"SDK_name":"rust"},"action":"initialize"}"#;
 
         //infor TM that rust TA is running
-        println!("Sending SDK name to Test Manager!");
+        dbg!("Sending SDK name to Test Manager!");
         let message = sdk_init.as_bytes();
 
         let socket_clone = self.clientsocket.clone();
@@ -256,33 +256,33 @@ println!("json data json_str_ref: {:?}", json_str_ref);
             .expect("error in sending data to TM")
             .write_all(message);
 
-            //println!("\n\n retunr value: {:?} \n", retun_value);
+            //dbg!("\n\n retunr value: {:?} \n", retun_value);
     }
 
     async fn send_to_tm(self, json_message: JsonResponseData) {
 
-        println!("sending status to TM ");
+        //dbg!("sending status to TM ");
         let json_message_str = convert_json_to_jsonstring(&json_message);
-        println!("sending status to TM message {}",json_message_str);
+       // dbg!("sending status to TM message {}",json_message_str);
         let message = json_message_str.as_bytes();
-        println!("sending status to TM 2 ");
+       // dbg!("sending status to TM 2 ");
         let socket_clone = self.clientsocket_to_tm.clone();
-        println!("sending status to TM 3 ");
+       // dbg!("sending status to TM 3 ");
           // Lock the mutex to access the TcpStream
     //let locked_socket = socket_clone.lock().expect("Failed to lock mutex");
 
 
     // Retrieve the peer address of the TcpStream
     //let peer_addr = locked_socket.peer_addr().expect("Failed to get peer address");
-    println!("sending status to TM 4 ");
-    //println!("peer addr {}",peer_addr);
+  //  dbg!("sending status to TM 4 ");
+    //dbg!("peer addr {}",peer_addr);
         let result = socket_clone
             .try_lock()
             .expect("error in sending data to TM")
             .write_all(message);
-        println!("sending status to TM done");
+        //dbg!("sending status to TM done");
 
-       // println!("result {}", result);
+       // dbg!("result {}", result);
     }
     pub fn close_connection(&self) {
       //  let _ = self

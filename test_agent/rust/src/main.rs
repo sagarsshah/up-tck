@@ -133,12 +133,12 @@ fn main() {
      /*      let test_agent_socket = match TcpStream::connect(TEST_MANAGER_ADDR).await {
               Ok(socket) => socket,
               Err(err) => {
-                  eprintln!("Error connecting to TEST_MANAGER_ADDR: {}", err);
+                  edbg!("Error connecting to TEST_MANAGER_ADDR: {}", err);
                   return;
               }
           };
 */
-          println!("Before transport socket");
+          dbg!("Before transport socket");
           let mut transport_socket = UtrasnsportSocket::new();
           let transport_socket_clone = transport_socket.clone();
 
@@ -151,13 +151,13 @@ fn main() {
           // Instead, handle the error if it occurs
           tokio::spawn(async move {
               if let Err(err) = blocking_task.await {
-                  eprintln!("Error in socket_init: {}", err);
+                  dbg!("Error in socket_init: {}", err);
                   return;
               }
-              println!("socket_init completed successfully");
+              dbg!("socket_init completed successfully");
           });
 
-          println!("After transport socket");
+          dbg!("After transport socket");
           let agent = SocketTestAgent::new(test_agent_socket,test_agent_socket_to_tm, transport_socket_clone);
           agent.clone().receive_from_tm().await;
       });
@@ -196,25 +196,25 @@ let json_str2 = r#"
     // Parse JSON to protobuf message
     let json_value: Value = serde_json::from_str(json_str2).unwrap();
 
-    println!("json Message: {:?}", json_value);
+    dbg!("json Message: {:?}", json_value);
 
     let u_message: WrapperUMessage = serde_json::from_value(json_value).unwrap();
 
-    println!("\n\n Protobuf Message: {:?} \n", u_message);
+    dbg!("\n\n Protobuf Message: {:?} \n", u_message);
 
     let binding = u_message.0.to_string();
     let proto_value = binding.to_value();
     //let proto_string :Value= proto_value.try_into().expect("couldn't conver");
     //let json_data = serde_json::from_value(proto_value);
 
-    println!("\n\n Protobuf Message: {:?} \n", proto_value);
+    dbg!("\n\n Protobuf Message: {:?} \n", proto_value);
 
     let json_value = string_to_json(&proto_value.to_string());
 
-    println!("Converted JSON: {}", json_value.to_string());
+    dbg!("Converted JSON: {}", json_value.to_string());
 
     // Print JSON object
-    println!("{}", serde_json::to_string_pretty(&json_value).unwrap());
+    dbg!("{}", serde_json::to_string_pretty(&json_value).unwrap());
 
 
 */

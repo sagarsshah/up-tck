@@ -47,7 +47,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-        println!("WrapperUUri: {:?}", value);
+        //dbg!("WrapperUUri: {:?}", value.);
 
         //update authority
         let _authority_name = match value
@@ -88,7 +88,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         _authority.set_ip(_authority_number_ip);
         _authority.special_fields = _special_fields;
 
-        println!("_authority: {:?}", _authority);
+      //  dbg!("_authority: {:?}", _authority);
         let ___authority = MessageField(Some(Box::new(_authority)));
 
         //update entity
@@ -137,7 +137,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         _entity.version_major = Some(_entity_version_major);
         _entity.version_minor = Some(_entity_version_minor);
         _entity.special_fields = _entity_special_fields;
-        println!("_entity: {:?}", _entity);
+      //  dbg!("_entity: {:?}", _entity);
         let ___entity = MessageField(Some(Box::new(_entity)));
 
         let _resource_name = match value
@@ -180,7 +180,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         _resource.message = _resource_message;
         _resource.id = Some(_resource_id);
 
-        println!("_resource: {:?}", _resource);
+     //   dbg!("_resource: {:?}", _resource);
         let ___resource = MessageField(Some(Box::new(_resource)));
         // special field //todo
         let _special_fields = SpecialFields::default();
@@ -201,7 +201,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-        println!("WrapperUAttribute: {:?}", value);
+      //  dbg!("WrapperUAttribute: {:?}", value);
         // Conversion function from string to enum variant
         fn from_str_comstatus(s: &str) -> UCode {
             match s {
@@ -257,7 +257,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             ),
             None => UPriority::UPRIORITY_UNSPECIFIED,
         };
-        println!("_priority: {:?}", _priority);
+        dbg!("_priority: {:?}", _priority);
 
         let _type = match value.get("type") {
             Some(_type) => from_str_type(
@@ -267,7 +267,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             ),
             None => UMessageType::UMESSAGE_TYPE_UNSPECIFIED,
         };
-        println!("_type: {:?}", _type);
+        dbg!("_type: {:?}", _type);
 
         let _source = match value.get("source") {
             Some(_source) => {
@@ -277,14 +277,14 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         };
 
         let __source = MessageField(Some(Box::new(_source.0)));
-        println!("_source: {:?}", __source);
+        dbg!( __source.clone());
 
         let _sink = match value.get("sink") {
             Some(_sink) => serde_json::from_value::<WrapperUUri>(_sink.clone()).unwrap_or_default(),
             None => WrapperUUri::default(),
         };
         let __sink = MessageField(Some(Box::new(_sink.0)));
-        println!("_sink: {:?}", __sink);
+        dbg!(__sink.clone());
 
         let _id_msb = match value.get("id").and_then(|resource| resource.get("msb")) {
             Some(_id_msb) => _id_msb
@@ -309,7 +309,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             lsb: _id_lsb,
             special_fields: SpecialFields::default(),
         };
-        println!("__id: {:?}", ___id);
+       // dbg!("__id: {:?}", ___id);
         let __id = MessageField(Some(Box::new(___id)));
 
         let _ttl = match value.get("ttl") {
@@ -364,7 +364,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             lsb: _reqid_lsb,
             special_fields: SpecialFields::default(),
         };
-        println!("__id: {:?}", ___reqid);
+      //  dbg!("__id: {:?}", ___reqid);
         let __reqid = MessageField(Some(Box::new(___reqid)));
 
         let _token = match value.get("token") {
@@ -406,7 +406,7 @@ impl<'de> Deserialize<'de> for WrapperUPayload {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-        println!("WrapperUPayload: {:?}", value);
+      //  dbg!("WrapperUPayload: {:?}", value);
 
         fn from_str_format(s: &str) -> UPayloadFormat {
             match s {
@@ -473,9 +473,9 @@ impl<'de> Deserialize<'de> for WrapperUMessage {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-        println!("WrapperUMessage: {:?} \n", value);
+      //  dbg!("WrapperUMessage: {:?} \n", value);
         // let test:UMessage  = value.clone().into();
-        // println!("WrapperUMessage after into_proto: {:?}\n", value.clone().into_proto());
+        // dbg!("WrapperUMessage after into_proto: {:?}\n", value.clone().into_proto());
 
         let wattributes = match value.get("attributes") {
             Some(attributes) => {
@@ -492,9 +492,9 @@ impl<'de> Deserialize<'de> for WrapperUMessage {
         };
 
         let mattribute = MessageField::from_option(Some(wattributes.0));
-        println!("mattribute: {:?} \n", mattribute);
+       // dbg!("mattribute: {:?} \n", mattribute);
         let mpayload = MessageField::from_option(Some(wpayload.0));
-        println!("mpayload: {:?} \n", mpayload);
+       // dbg!("mpayload: {:?} \n", mpayload);
         // special field //todo
         let _special_fields = SpecialFields::default();
 
