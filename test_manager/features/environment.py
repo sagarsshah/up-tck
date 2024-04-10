@@ -59,7 +59,7 @@ def create_command(filepath_from_root_repo: str) -> List[str]:
     elif filepath_from_root_repo.endswith('.exe'):
         pass
     else:
-        raise Exception("only accept .jar and .py files")
+        pass
     command.append(os.path.abspath(os.path.dirname(os.getcwd()) + "/" + filepath_from_root_repo))
     print(command)
     return command
