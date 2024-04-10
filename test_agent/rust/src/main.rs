@@ -124,6 +124,8 @@ fn main() {
 
       let test_agent_socket: TcpStreamSync =
       TcpStreamSync::connect(TEST_MANAGER_ADDR).expect("issue in connecting  sync socket");
+      let test_agent_socket_to_tm: TcpStreamSync =
+      TcpStreamSync::connect(TEST_MANAGER_ADDR).expect("issue in connecting  sync socket");
       // Spawn a Tokio task within the runtime
       
       rt.block_on(async {
@@ -156,7 +158,7 @@ fn main() {
           });
 
           println!("After transport socket");
-          let agent = SocketTestAgent::new(test_agent_socket, transport_socket_clone);
+          let agent = SocketTestAgent::new(test_agent_socket,test_agent_socket_to_tm, transport_socket_clone);
           agent.clone().receive_from_tm().await;
       });
   });

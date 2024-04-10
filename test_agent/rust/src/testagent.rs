@@ -54,7 +54,7 @@ pub struct SocketTestAgent {
     utransport: UtrasnsportSocket,
    // clientsocket: Arc<Mutex<TcpStream>>,
    clientsocket: Arc<Mutex<TcpStreamSync>>,
-   //clientsocket_clone: Arc<Mutex<TcpStreamSync>>,
+   clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
     listner_map: Vec<String>,
 }
 #[async_trait]
@@ -83,7 +83,7 @@ impl Clone for SocketTestAgent {
         SocketTestAgent {
             utransport: self.utransport.clone(), // Assuming UtrasnsportSocket implements Clone
             clientsocket: self.clientsocket.clone(),
-           // clientsocket_clone:self.clientsocket.clone(),
+            clientsocket_to_tm:self.clientsocket_to_tm.clone(),
             listner_map: self.listner_map.clone(), // Clone Vec<String>
         }
     }
@@ -94,13 +94,16 @@ impl Clone for SocketTestAgent {
 }
 
 impl SocketTestAgent {
-    pub fn new(test_clientsocket: TcpStreamSync, utransport: UtrasnsportSocket) -> Self {
+    pub fn new(test_clientsocket: TcpStreamSync, test_clientsocket_to_tm : TcpStreamSync, utransport: UtrasnsportSocket) -> Self {
         let socket = Arc::new(Mutex::new(test_clientsocket));
+        let socket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
         let clientsocket = socket;
+        let clientsocket_to_tm = socket_to_tm;
      //   let clientsocket_clone = clientsocket.clone();
         SocketTestAgent {
             utransport,
             clientsocket,
+            clientsocket_to_tm,
         //    clientsocket_clone,
             listner_map: Vec::new(),
         }
@@ -210,6 +213,9 @@ println!("json data json_str_ref: {:?}", json_str_ref);
                 message: _status_clone.to_owned(),
                 ue: "rust".to_owned(),
             };
+
+
+            
             <SocketTestAgent as Clone>::clone(&self)
                 .send_to_tm(_json_message)
                 .await;
@@ -241,7 +247,7 @@ println!("json data json_str_ref: {:?}", json_str_ref);
         println!("sending status to TM message {}",json_message_str);
         let message = json_message_str.as_bytes();
         println!("sending status to TM 2 ");
-        let socket_clone = self.clientsocket.clone();
+        let socket_clone = self.clientsocket_to_tm.clone();
         println!("sending status to TM 3 ");
           // Lock the mutex to access the TcpStream
     //let locked_socket = socket_clone.lock().expect("Failed to lock mutex");
