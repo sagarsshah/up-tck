@@ -41,7 +41,7 @@ from utils import loggerutils
 
 PYTHON_TA_PATH = "/test_agent/python/testagent.py"
 JAVA_TA_PATH = "/test_agent/java/target/tck-test-agent-java-jar-with-dependencies.jar"
-RUST_TA_PATH = "/test_agent/rust/target/debug/rust_tck.exe"
+RUST_TA_PATH = "/test_agent/rust/target/debug/rust_tck"
 DISPATCHER_PATH = "/dispatcher/dispatcher.py"
 
 
