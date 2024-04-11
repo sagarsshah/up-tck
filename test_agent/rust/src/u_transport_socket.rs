@@ -44,9 +44,9 @@ use crate::constants::BYTES_MSG_LENGTH;
 use crate::constants::DISPATCHER_ADDR;
 
 pub trait UtransportExt {
-    fn socket_init(&mut self);
-    fn _handle_publish_message(&mut self, umsg: UMessage);
-    fn _handle_request_message(&mut self, umsg: UMessage);
+    async fn socket_init(&mut self);
+    async fn _handle_publish_message(&mut self, umsg: UMessage);
+    async fn _handle_request_message(&mut self, umsg: UMessage);
     fn read_socket(&self, buffer: &mut [u8]) -> io::Result<usize>;
 }
 
@@ -80,7 +80,7 @@ impl UtrasnsportSocket {
 }
 
 impl UtransportExt for UtrasnsportSocket {
-    fn socket_init(&mut self) {
+    async fn socket_init(&mut self) {
         loop {
             // Receive data from the socket
             let mut buffer: [u8; BYTES_MSG_LENGTH] = [0; BYTES_MSG_LENGTH];
@@ -98,18 +98,21 @@ impl UtransportExt for UtrasnsportSocket {
                 continue;
             }
 
-            let mut umessage = UMessage::new(); // Assuming UMessage is a protobuf-generated message type
+            //dbg!(buffer);
+            dbg!(bytes_read);
+            let umessage = UMessage::parse_from_bytes(&buffer[..bytes_read]).expect("Failed to parse message");
 
-            if let Err(err) = umessage.merge_from_bytes(&buffer) {
-                dbg!("Error deserializing UMessage: {}", err);
-            } else {
-                eprint!("data seems to be correct!");
-            }
+            dbg!("SUCCESSFUL PARSE!");
+            // if let Err(err) = umessage(&buffer) {
+            //     dbg!("Error deserializing UMessage: {}", err);
+            // } else {
+            //     eprint!("data seems to be correct!");
+            // }
 
             match umessage.attributes.type_.enum_value() {
                 Ok(mt) => match mt {
                     UMessageType::UMESSAGE_TYPE_PUBLISH => {
-                        self._handle_publish_message(umessage);
+                        self._handle_publish_message(umessage).await;
                         // Ok(())
                         ()
                     }
@@ -117,7 +120,7 @@ impl UtransportExt for UtrasnsportSocket {
                     UMessageType::UMESSAGE_TYPE_UNSPECIFIED => (), //Err("Umessage type unspecified".to_string()),
                     UMessageType::UMESSAGE_TYPE_RESPONSE => (),
                     UMessageType::UMESSAGE_TYPE_REQUEST => {
-                        self._handle_request_message(umessage);
+                        self._handle_request_message(umessage).await;
                         // Ok(())
                         ()
                     } //Err("umessage type reponse not implemented".to_string()),
@@ -133,7 +136,8 @@ impl UtransportExt for UtrasnsportSocket {
         socket.read(buffer) //.await
     }
 
-    fn _handle_publish_message(&mut self, umsg: UMessage) {
+    async fn _handle_publish_message(&mut self, umsg: UMessage) {
+        dbg!("HANDLING PUB MESG");
         if let Some(listner_array) = self
             .listner_map
             .lock()
@@ -141,12 +145,14 @@ impl UtransportExt for UtrasnsportSocket {
             .get(&umsg.attributes.source.to_string())
         {
             for listner_ref in listner_array {
-                let _ = listner_ref.on_receive(umsg.clone());
+                dbg!("Found registed listener!");
+                let _ = listner_ref.on_receive(umsg.clone()).await;
+                dbg!("After onReceive");
             }
         }
     }
 
-    fn _handle_request_message(&mut self, umsg: UMessage) {
+    async fn _handle_request_message(&mut self, umsg: UMessage) {
         if let Some(listner_array) = self
             .listner_map
             .lock()
@@ -154,7 +160,7 @@ impl UtransportExt for UtrasnsportSocket {
             .get(&umsg.attributes.sink.to_string())
         {
             for listner_ref in listner_array {
-                let _ = listner_ref.on_receive(umsg.clone());
+                let _ = listner_ref.on_receive(umsg.clone()).await;
             }
         }
     }
@@ -185,7 +191,10 @@ impl UTransport for UtrasnsportSocket {
             .try_clone()
             .expect("dispatcher socket connection cloning failed");
 
-        let umsg_serialized = message.to_string().as_bytes().to_vec().clone();
+        let umsg_serialized = message.clone().write_to_bytes().expect("Send Serialization Issue");
+        dbg!(umsg_serialized.clone());
+        let umessage_test = UMessage::parse_from_bytes(&umsg_serialized.clone()).expect("Failed to parse message");
+        dbg!(umessage_test.clone());
         // Acquire the lock on the mutex to access the TcpStream
         // Perform the write operation on the TcpStream
         let _payload = *message

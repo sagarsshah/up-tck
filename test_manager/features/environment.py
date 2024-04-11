@@ -106,9 +106,9 @@ def before_all(context):
     process: subprocess.Popen = create_subprocess(command)
     context.python_ta_process = process
 
-    command = create_command(JAVA_TA_PATH)
-    process: subprocess.Popen = create_subprocess(command)
-    context.java_ta_process = process
+    # command = create_command(JAVA_TA_PATH)
+    # process: subprocess.Popen = create_subprocess(command)
+    # context.java_ta_process = process
 
     command = create_command(RUST_TA_PATH)
     process: subprocess.Popen = create_subprocess(command)
@@ -129,13 +129,13 @@ def after_all(context: Context):
     context.on_receive_serialized_uuid = None
     context.on_receive_deserialized_uuid = None
     context.tm.close_socket(sdk="python")
-    context.tm.close_socket(sdk="java")
+    # context.tm.close_socket(sdk="java")
     context.tm.close_socket(sdk="rust")
     context.tm.close()
 
     try:
         context.dispatcher_process.terminate()
-        context.java_ta_process.terminate()
+        # context.java_ta_process.terminate()
         context.python_ta_process.terminate()
         context.rust_ta_process.terminate()
     except Exception as e:

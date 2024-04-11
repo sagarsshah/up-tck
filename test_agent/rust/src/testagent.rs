@@ -24,10 +24,11 @@
 
 use async_trait::async_trait;
 use log::kv::ToValue;
+use protobuf::MessageField;
 use serde_json::Value;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use up_rust::{UCode, UListener};
+use up_rust::{UCode, UListener, UUIDBuilder};
 use up_rust::{UMessage, UStatus, UTransport};
 
 use std::io::{Read, Write};
@@ -59,7 +60,7 @@ pub struct SocketTestAgent {
 impl UListener for SocketTestAgent {
     async fn on_receive(&self, msg: UMessage) {
         dbg!("Listener onreceived");
-        let mut json_message = JsonResponseData {
+        let json_message = JsonResponseData {
             action: "onReceive".to_owned(),
             data: HashMap::new(),
             ue: "rust".to_string(),
@@ -151,24 +152,27 @@ impl SocketTestAgent {
             let json_msg: Value = serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
-            
+            dbg!("JSONMSG");
+            dbg!(json_msg);
             
             let json_str_ref = action.as_str().expect("issue in converting value to string");
             dbg!("json data json_str_ref: {:?}", json_str_ref);
 
             let status = match json_str_ref {
                 SEND_COMMAND => {
-                    let wu_message: WrapperUMessage =
+                    let mut wu_message: WrapperUMessage =
                         serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                         dbg!( wu_message.0.clone());
-                    let u_message = wu_message.0;
-
+                    let  u_message = wu_message.0;
                     action_str = constants::SEND_COMMAND;
                     self.utransport.send(u_message).await
                 }
 
                 REGISTER_LISTENER_COMMAND => {
                     let cloned_listener = Arc::clone(&arc_self);
+                    // dbg!("Callable?");
+                    // arc_self.on_receive(UMessage::default()).await;
+                    // dbg!("Callable!");
 
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                     dbg!( wu_uuri.0.clone());
@@ -237,15 +241,7 @@ impl SocketTestAgent {
                     status_dict.insert("code".to_string(), enum_string.to_string());
                 }
             }
-  
-            // let _status_clone = status
-            //     .clone()
-            //     .to_owned()
-            //     .err()
-            //     .unwrap()
-            //     .to_string()
-            //     .to_value()
-            //     .to_string();
+
             let _json_message = JsonResponseData {
                 action: action_str.to_owned(),
                 data: status_dict.to_owned(),

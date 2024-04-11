@@ -42,6 +42,7 @@ from uprotocol.transport.builder.uattributesbuilder import UAttributesBuilder
 from uprotocol.transport.ulistener import UListener
 from uprotocol.uri.serializer.longuriserializer import LongUriSerializer
 from uprotocol.uuid.serializer.longuuidserializer import LongUuidSerializer
+from uprotocol.uuid.factory.uuidfactory import Factories
 
 import constants as CONSTANTS
 
@@ -110,6 +111,7 @@ def dict_to_proto(parent_json_obj, parent_proto_obj):
 
 def handle_send_command(json_msg):
     umsg = dict_to_proto(json_msg["data"], UMessage())
+    umsg.attributes.id.CopyFrom(Factories.UPROTOCOL.create())
     return transport.send(umsg)
 
 

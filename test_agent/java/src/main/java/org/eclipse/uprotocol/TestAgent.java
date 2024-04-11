@@ -32,6 +32,7 @@ import org.eclipse.uprotocol.rpc.CallOptions;
 import org.eclipse.uprotocol.transport.UListener;
 import org.eclipse.uprotocol.transport.builder.UAttributesBuilder;
 import org.eclipse.uprotocol.uri.serializer.LongUriSerializer;
+import org.eclipse.uprotocol.uuid.factory.UuidFactory;
 import org.eclipse.uprotocol.uuid.serializer.LongUuidSerializer;
 import org.eclipse.uprotocol.v1.*;
 import org.json.JSONObject;
@@ -122,7 +123,9 @@ public class TestAgent {
     private static UStatus handleSendCommand(Map<String, Object> jsonData) {
         UMessage uMessage = (UMessage) ProtoConverter.dictToProto((Map<String, Object>) jsonData.get("data"),
                 UMessage.newBuilder());
-        return transport.send(uMessage);
+        UAttributes uAttributesWithId = uMessage.getAttributes().toBuilder().setId(UuidFactory.Factories.UPROTOCOL.factory().create()).build();
+        UMessage uMessageWithId = uMessage.toBuilder().setAttributes(uAttributesWithId).build();
+        return transport.send(uMessageWithId);
     }
 
     private static UStatus handleRegisterListenerCommand(Map<String, Object> jsonData) {
