@@ -22,7 +22,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 pub const SEND_COMMAND: &str = "send";
-pub const REGISTER_LISTENER_COMMAND: &str = "registerlistener";
+pub const REGISTER_LISTENER_COMMAND: &str= "registerlistener";
 pub const UNREGISTER_LISTENER_COMMAND: &str = "unregisterlistener";
 pub const INVOKE_METHOD_COMMAND: &str = "invokemethod";
 
@@ -42,14 +42,14 @@ pub const BYTES_MSG_LENGTH: usize = 32767;
 
 #[test]
 pub fn test_constants() {
-    println!("SEND_COMMAND: {}", SEND_COMMAND);
-    println!("REGISTER_LISTENER_COMMAND: {}", REGISTER_LISTENER_COMMAND);
-    println!(
+    dbg!("SEND_COMMAND: {}", SEND_COMMAND);
+    dbg!("REGISTER_LISTENER_COMMAND: {}", REGISTER_LISTENER_COMMAND);
+    dbg!(
         "UNREGISTER_LISTENER_COMMAND: {}",
         UNREGISTER_LISTENER_COMMAND
     );
-    println!("INVOKE_METHOD_COMMAND: {}", INVOKE_METHOD_COMMAND);
-    println!("DISPATCHER_ADDR: {:?}", DISPATCHER_ADDR);
-    println!("TEST_MANAGER_ADDR: {:?}", TEST_MANAGER_ADDR);
-    println!("BYTES_MSG_LENGTH: {}", BYTES_MSG_LENGTH);
+    dbg!("INVOKE_METHOD_COMMAND: {}", INVOKE_METHOD_COMMAND);
+    dbg!("DISPATCHER_ADDR: {:?}", DISPATCHER_ADDR);
+    dbg!("TEST_MANAGER_ADDR: {:?}", TEST_MANAGER_ADDR);
+    dbg!("BYTES_MSG_LENGTH: {}", BYTES_MSG_LENGTH);
 }

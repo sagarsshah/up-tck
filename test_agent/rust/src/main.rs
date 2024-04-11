@@ -138,7 +138,7 @@ fn main() {
               }
           };
 */
-          dbg!("Before transport socket");
+         
           let mut transport_socket = UtrasnsportSocket::new();
           let transport_socket_clone = transport_socket.clone();
 
@@ -157,7 +157,7 @@ fn main() {
               dbg!("socket_init completed successfully");
           });
 
-          dbg!("After transport socket");
+         
           let agent = SocketTestAgent::new(test_agent_socket,test_agent_socket_to_tm, transport_socket_clone);
           agent.clone().receive_from_tm().await;
       });

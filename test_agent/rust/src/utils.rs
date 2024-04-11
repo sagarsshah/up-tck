@@ -271,20 +271,17 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
 
         let _source = match value.get("source") {
             Some(_source) => {
-                serde_json::from_value::<WrapperUUri>(_source.clone()).unwrap_or_default()
+                serde_json::from_value::<WrapperUUri>(_source.clone()).unwrap_or_default() 
             }
             None => WrapperUUri::default(),
         };
 
-        let __source = MessageField(Some(Box::new(_source.0)));
-        dbg!( __source.clone());
 
         let _sink = match value.get("sink") {
             Some(_sink) => serde_json::from_value::<WrapperUUri>(_sink.clone()).unwrap_or_default(),
             None => WrapperUUri::default(),
         };
-        let __sink = MessageField(Some(Box::new(_sink.0)));
-        dbg!(__sink.clone());
+
 
         let _id_msb = match value.get("id").and_then(|resource| resource.get("msb")) {
             Some(_id_msb) => _id_msb
@@ -309,7 +306,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             lsb: _id_lsb,
             special_fields: SpecialFields::default(),
         };
-       // dbg!("__id: {:?}", ___id);
+      
         let __id = MessageField(Some(Box::new(___id)));
 
         let _ttl = match value.get("ttl") {
@@ -364,7 +361,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             lsb: _reqid_lsb,
             special_fields: SpecialFields::default(),
         };
-      //  dbg!("__id: {:?}", ___reqid);
+      
         let __reqid = MessageField(Some(Box::new(___reqid)));
 
         let _token = match value.get("token") {
@@ -382,20 +379,30 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         };
         // special field //todo
         let _special_fields = SpecialFields::default();
-        Ok(WrapperUAttribute(UAttributes {
-            special_fields: _special_fields,
-            id: __id,
-            type_: _type.into(),
-            source: __source,
-            sink: __sink,
-            priority: _priority.into(),
-            ttl: Some(_ttl.into()),
-            permission_level: Some(_permission_level.into()),
-            commstatus: Some(_commstatus.into()),
-            reqid: __reqid,
-            token: Some(_token.to_owned()),
-            traceparent: Some(_traceparent.to_owned()),
-        }))
+        let mut _uattributes =  UAttributes::new();
+       if _special_fields.ne(&SpecialFields::default()){
+        _uattributes.special_fields = _special_fields;
+       }
+        _uattributes.id = __id;
+        _uattributes.type_ = _type.into();
+
+        
+        if !(_source.0.clone() == UUri::default()) {
+        _uattributes.source = MessageField(Some(Box::new(_source.0)));
+        }
+        if!(_sink.0.clone() == UUri::default()){
+            _uattributes.sink = MessageField(Some(Box::new(_sink.0)));
+            }
+            _uattributes.priority = _priority.into();
+            _uattributes.ttl = _ttl.into();
+            _uattributes.permission_level = Some(_permission_level.into());
+            _uattributes.commstatus = Some(_commstatus.into());
+            _uattributes.reqid = __reqid;
+            _uattributes.token= Some(_token.to_owned());
+            _uattributes.traceparent = Some(_traceparent.to_owned());
+            dbg!(_uattributes.clone());
+        
+        Ok(WrapperUAttribute( _uattributes))
     }
 }
 #[derive(Default)]
