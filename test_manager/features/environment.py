@@ -41,7 +41,7 @@ from utils import loggerutils
 
 PYTHON_TA_PATH = "/test_agent/python/testagent.py"
 JAVA_TA_PATH = "/test_agent/java/target/tck-test-agent-java-jar-with-dependencies.jar"
-RUST_TA_PATH = "/test_agent/rust/target/debug/rust_tck.exe"
+RUST_TA_PATH = "/test_agent/rust/target/debug/rust_tck"
 DISPATCHER_PATH = "/dispatcher/dispatcher.py"
 
 
@@ -59,7 +59,7 @@ def create_command(filepath_from_root_repo: str) -> List[str]:
     elif filepath_from_root_repo.endswith('.exe'):
         pass
     else:
-        raise Exception("only accept .jar and .py files")
+        pass
     command.append(os.path.abspath(os.path.dirname(os.getcwd()) + "/" + filepath_from_root_repo))
     print(command)
     return command
@@ -110,9 +110,9 @@ def before_all(context):
     process: subprocess.Popen = create_subprocess(command)
     context.java_ta_process = process
 
-    # command = create_command(RUST_TA_PATH)
-    # process: subprocess.Popen = create_subprocess(command)
-    # context.rust_ta_process = process
+    command = create_command(RUST_TA_PATH)
+    process: subprocess.Popen = create_subprocess(command)
+    context.rust_ta_process = process
 
     context.logger.info("Created All Test Agents...")
 

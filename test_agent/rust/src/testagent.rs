@@ -27,7 +27,7 @@ use log::kv::ToValue;
 use serde_json::Value;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use up_rust::UListener;
+use up_rust::{UCode, UListener};
 use up_rust::{UMessage, UStatus, UTransport};
 
 use std::io::{Read, Write};
@@ -44,17 +44,15 @@ use crate::*;
 
 #[derive(Serialize)]
 pub struct JsonResponseData {
-    message: String,
+    data: HashMap<String, String>,
     action: String,
     ue: String,
 }
-// Define a listener type alias
 
 pub struct SocketTestAgent {
     utransport: UtrasnsportSocket,
-   // clientsocket: Arc<Mutex<TcpStream>>,
-   clientsocket: Arc<Mutex<TcpStreamSync>>,
-   clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
+    clientsocket: Arc<Mutex<TcpStreamSync>>,
+    clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
     listner_map: Vec<String>,
 }
 #[async_trait]
@@ -63,10 +61,10 @@ impl UListener for SocketTestAgent {
         dbg!("Listener onreceived");
         let mut json_message = JsonResponseData {
             action: "onReceive".to_owned(),
-            message: "None".to_string(),
+            data: HashMap::new(),
             ue: "rust".to_string(),
         };
-        json_message.message = msg.clone().to_string().to_value().to_string();
+        //json_message.data = msg.clone().to_string().to_value().to_string();
 
         <SocketTestAgent as Clone>::clone(&self)
             .send_to_tm(json_message)
@@ -99,12 +97,10 @@ impl SocketTestAgent {
         let socket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
         let clientsocket = socket;
         let clientsocket_to_tm = socket_to_tm;
-     //   let clientsocket_clone = clientsocket.clone();
         SocketTestAgent {
             utransport,
             clientsocket,
             clientsocket_to_tm,
-        //    clientsocket_clone,
             listner_map: Vec::new(),
         }
     }
@@ -129,13 +125,7 @@ impl SocketTestAgent {
         // Clone Arc to capture it in the closure
 
         let arc_self = Arc::new(self.clone());
-       // dbg!("calling *inform_tm_ta_starting");
-        //println("")   ;
-       // self.inform_tm_ta_starting();
-       self.clone().inform_tm_ta_starting();
-       // <SocketTestAgent as Clone>::clone(&self)
-         //   .inform_tm_ta_starting()
-          //  .await;
+        self.clone().inform_tm_ta_starting();
         let mut socket = self.clientsocket.lock().expect("error accessing TM server");
 
         loop {
@@ -149,31 +139,22 @@ impl SocketTestAgent {
                     break;
                 }
             };
-          //  dbg!("received data from TM 1{}", bytes_received);
             // Check if no data is received
             if bytes_received == 0 {
                 continue;
             }
-            //dbg!("received data from TM 2");
 
             let recv_data_str: std::borrow::Cow<'_, str> =
-                String::from_utf8_lossy(&recv_data[..bytes_received]);
-              //  dbg!("received data from TM 2 {}",recv_data_str);
-                let cleaned_json_string = self.clone().sanitize_input_string(&recv_data_str).replace("BYTES:", "");
-               // let cleaned_json_string = recv_data_str.chars().filter(|&c| c >= ' ' || c == '\t' || c == '\n' || c == '\r').collect::<String>();
-              //  dbg!("received data from TM 2.1 {}",cleaned_json_string);
+            String::from_utf8_lossy(&recv_data[..bytes_received]);
+            let mut action_str = "";
+            let cleaned_json_string = self.clone().sanitize_input_string(&recv_data_str).replace("BYTES:", "");
             let json_msg: Value = serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
-         //   let json_data_value = serde_json::from_str(&json_data_string).unwrap();
-           // dbg!("json data received: {:?}", json_data_value);
-             
-           // let json_string = action.to_string();
-           // dbg!("json data action: {:?}", json_string);
             
             
-let json_str_ref = action.as_str().expect("issue in converting value to string");
-dbg!("json data json_str_ref: {:?}", json_str_ref);
+            let json_str_ref = action.as_str().expect("issue in converting value to string");
+            dbg!("json data json_str_ref: {:?}", json_str_ref);
 
             let status = match json_str_ref {
                 SEND_COMMAND => {
@@ -182,6 +163,7 @@ dbg!("json data json_str_ref: {:?}", json_str_ref);
                         dbg!( wu_message.0.clone());
                     let u_message = wu_message.0;
 
+                    action_str = constants::SEND_COMMAND;
                     self.utransport.send(u_message).await
                 }
 
@@ -191,6 +173,7 @@ dbg!("json data json_str_ref: {:?}", json_str_ref);
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                     dbg!( wu_uuri.0.clone());
                     let u_uuri = wu_uuri.0;
+                    action_str = constants::REGISTER_LISTENER_COMMAND;
                     self.utransport
                         .register_listener(
                             u_uuri,
@@ -204,6 +187,7 @@ dbg!("json data json_str_ref: {:?}", json_str_ref);
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                     dbg!( wu_uuri.0.clone());
                     let u_uuri = wu_uuri.0;
+                    action_str = constants::UNREGISTER_LISTENER_COMMAND;
                     self.utransport
                         .unregister_listener(
                             u_uuri,
@@ -214,27 +198,61 @@ dbg!("json data json_str_ref: {:?}", json_str_ref);
 
                 _ => Ok({ () }), // Modify with appropriate handling
             };
-  
-            match status.clone() {
-                Ok(_) => println!("status: Ok"),
-                Err(err) => println!("status: Error: {:?}", err),
+
+
+            // Create an empty HashMap to store the fields of the message
+            let mut status_dict:HashMap<String, String> = HashMap::new();
+
+            match status {
+                Ok(()) => {
+                    // Handle the case when status is Ok
+                    let status = UStatus::default(); // Replace this with your actual status object
+                    status_dict.insert("message".to_string(), status.message.clone().unwrap_or_default());
+                    //status_dict.insert("code".to_string(), status.code);
+                    // Add more fields as needed
+                }
+                Err(u_status) => {
+                    // Handle the case when status is an error
+                    // Convert the error message to a string and insert it into the HashMap
+                    status_dict.insert("message".to_string(), u_status.message.clone().unwrap_or_default());
+                    let enum_string = match u_status.get_code() {
+                        UCode::OK => "OK",
+                        UCode::INTERNAL => "INTERNAL",
+                        UCode::ABORTED => "ABORTED",
+                        UCode::ALREADY_EXISTS => "ALREADY_EXISTS",
+                        UCode::CANCELLED => "CANCELLED",
+                        UCode::DATA_LOSS => "DATA_LOSS",
+                        UCode::DEADLINE_EXCEEDED => "DEADLINE_EXCEEDED",
+                        UCode::FAILED_PRECONDITION => "FAILED_PRECONDITION",
+                        UCode::INVALID_ARGUMENT => "INVALID_ARGUMENT",
+                        UCode::NOT_FOUND => "NOT_FOUND",
+                        UCode::OUT_OF_RANGE => "OUT_OF_RANGE",
+                        UCode::PERMISSION_DENIED => "PERMISSION_DENIED",
+                        UCode::RESOURCE_EXHAUSTED => "RESOURCE_EXHAUSTED",
+                        UCode::UNAUTHENTICATED => "UNAUTHENTICATED",
+                        UCode::UNAVAILABLE => "UNAVAILABLE",
+                        UCode::UNIMPLEMENTED => "UNIMPLEMENTED",
+                        UCode::UNKNOWN => "UNKNOWN"
+                    };
+                    status_dict.insert("code".to_string(), enum_string.to_string());
+                }
             }
-            let _status_clone = status
-                .clone()
-                .to_owned()
-                .err()
-                .unwrap()
-                .to_string()
-                .to_value()
-                .to_string();
+  
+            // let _status_clone = status
+            //     .clone()
+            //     .to_owned()
+            //     .err()
+            //     .unwrap()
+            //     .to_string()
+            //     .to_value()
+            //     .to_string();
             let _json_message = JsonResponseData {
-                action: "uStatus".to_owned(),
-                message: _status_clone.to_owned(),
+                action: action_str.to_owned(),
+                data: status_dict.to_owned(),
                 ue: "rust".to_owned(),
             };
 
 
-            
             <SocketTestAgent as Clone>::clone(&self)
                 .send_to_tm(_json_message)
                 .await;
@@ -255,42 +273,19 @@ dbg!("json data json_str_ref: {:?}", json_str_ref);
             .lock()
             .expect("error in sending data to TM")
             .write_all(message);
-
-            //dbg!("\n\n retunr value: {:?} \n", retun_value);
     }
 
     async fn send_to_tm(self, json_message: JsonResponseData) {
 
-        //dbg!("sending status to TM ");
         let json_message_str = convert_json_to_jsonstring(&json_message);
-       // dbg!("sending status to TM message {}",json_message_str);
         let message = json_message_str.as_bytes();
-       // dbg!("sending status to TM 2 ");
         let socket_clone = self.clientsocket_to_tm.clone();
-       // dbg!("sending status to TM 3 ");
-          // Lock the mutex to access the TcpStream
-    //let locked_socket = socket_clone.lock().expect("Failed to lock mutex");
-
-
-    // Retrieve the peer address of the TcpStream
-    //let peer_addr = locked_socket.peer_addr().expect("Failed to get peer address");
-  //  dbg!("sending status to TM 4 ");
-    //dbg!("peer addr {}",peer_addr);
         let result = socket_clone
             .try_lock()
             .expect("error in sending data to TM")
             .write_all(message);
-        //dbg!("sending status to TM done");
-
-       // dbg!("result {}", result);
     }
     pub fn close_connection(&self) {
-      //  let _ = self
-       //     .clientsocket
-         //   .lock()
-          //  .expect("error in sending data to TM")
-           // .shutdown(shutdown::Write);
            todo!();
-           
     }
 }
