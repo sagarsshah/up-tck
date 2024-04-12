@@ -23,14 +23,17 @@
  */
 
 use async_trait::async_trait;
+use env_logger::fmt::Formatter;
 use log::kv::ToValue;
 use protobuf::MessageField;
+//use serde_json::ser::Formatter;
 use serde_json::Value;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use up_rust::{UCode, UListener, UUIDBuilder};
 use up_rust::{UMessage, UStatus, UTransport};
 
+use std::fmt::Debug;
 use std::io::{Read, Write};
 use std::{
     collections::HashMap,
@@ -39,7 +42,8 @@ use std::{
 
 use serde::Serialize;
 
-use crate::u_transport_socket::UtrasnsportSocket;
+
+//use crate::u_transport_socket::UtrasnsportSocket;
 use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
 use crate::*;
 
@@ -56,17 +60,38 @@ pub struct SocketTestAgent {
     clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
     listner_map: Vec<String>,
 }
+use prost::Message;
+//use prost_json::Message as JsonMessage;
 #[async_trait]
 impl UListener for SocketTestAgent {
+    
+    
+
+
+    
+    
+    
     async fn on_receive(&self, msg: UMessage) {
-        dbg!("Listener onreceived");
-        let json_message = JsonResponseData {
+        dbg!("Listener onreceived:", msg.clone());
+        println!("Listener onreceived:{}", msg.clone());
+        let mut json_message = JsonResponseData {
             action: "onReceive".to_owned(),
             data: HashMap::new(),
             ue: "rust".to_string(),
         };
         //json_message.data = msg.clone().to_string().to_value().to_string();
+       
+  // Serialize the protobuf message to bytes
+ 
+  //let bytes = msg.to_string().as_bytes();
 
+  // Deserialize the bytes into a JSON value
+  //let json_value = serde_json::from_slice(&bytes).expect("issue in converting to sting ");
+
+  // Serialize the JSON value into a JSON string
+  //let json_string = serde_json::to_string(&json_value).expect("issue in converting to sting ");
+
+  
         <SocketTestAgent as Clone>::clone(&self)
             .send_to_tm(json_message)
             .await;

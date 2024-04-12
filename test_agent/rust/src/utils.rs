@@ -33,7 +33,7 @@ use up_rust::{
     UPayloadFormat, UPriority, UResource, UUri, UUID,
 };
 
-use protobuf::{MessageField, SpecialFields};
+use protobuf::{MessageDyn, MessageField, SpecialFields};
 
 pub fn convert_json_to_jsonstring<T: serde::Serialize>(value: &T) -> String {
     serde_json::to_string(value).expect("Failed to convert to JSON string")
@@ -526,4 +526,22 @@ mod tests {
     }
 
     // Write more test cases for other functions...
+}
+
+
+use prost::Message; // Import the prost crate for protobuf message handling
+use std::fmt::Debug;
+
+// Function to serialize any protobuf message to JSON string
+fn protobuf_to_json<M: Message>(message: &M) -> Result<String, serde_json::Error> {
+    // Serialize the protobuf message to bytes
+    let bytes = message.encode_to_vec();
+
+    // Deserialize the bytes into a JSON value
+    let json_value = serde_json::from_slice(&bytes)?;
+
+    // Serialize the JSON value into a JSON string
+    let json_string = serde_json::to_string(&json_value)?;
+
+    Ok(json_string)
 }

@@ -23,7 +23,16 @@
  */
 
 mod constants;
-mod u_transport_socket;
+// mod up_client_socket {
+//   mod rust{
+//   pub mod u_transport_socket;
+// }
+// }
+
+        // Specify the path to the external module file
+  #[path = "../../../up_client_socket/rust/u_transport_socket.rs"]
+pub mod u_transport_socket;
+ 
 mod utils;
 /*use std::arch::x86_64::_SIDD_BIT_MASK;
 use std::default;
@@ -35,13 +44,13 @@ use std::u32;*/
 use std::thread;
 
 use crate::constants::*;
-use crate::u_transport_socket::UtransportExt;
+//use crate::u_transport_socket::UtransportExt;
 //use crate::utils::convert_str_to_bytes;
 //use crate::utils::WrapperUMessage;
 //use log::kv::{value, ToValue};
 //use serde::{Deserialize, Deserializer, Serialize};
 use testagent::SocketTestAgent;
-use u_transport_socket::UtrasnsportSocket;
+use u_transport_socket::{UtransportExt, UtrasnsportSocket};
 mod testagent;
 //use anystruct::{IntoProto, ProtoStruct};
 //use json2pb::pbgen;

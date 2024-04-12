@@ -22,6 +22,14 @@ exclude = [
     ".github/*",
     ".gitignore",
 ]
+include = ["test_agent/rust/src/main.rs",
+           "test_agent/rust/*",
+           "up_client_socket/rust/*",]
+
+[[bin]]
+name = "rust_tck"  # Specify the name of your executable
+path = "test_agent/rust/src/main.rs"
+
 [lints.clippy]
 all = "deny"
 pedantic = "deny"
@@ -54,6 +62,8 @@ protobuf-json-mapping = "3.4.0"
 serde_json = "1.0"
 uuid = "1.8.0"
 
+
+#prost-json = "0.8"
 [features]
 debug_print = []
 
