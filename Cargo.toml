@@ -49,8 +49,8 @@ log = "0.4.17"
 prost = "0.12"
 prost-types = "0.12"
 protobuf = { version = "3.3" }
-#up-rust = { git = "https://github.com/eclipse-uprotocol/up-rust", rev = "68c8a1d94f0006daf4ba135c9cbbfddcd793108d" }
-up-rust = { git = "https://github.com/PLeVasseur/uprotocol-rust_fork.git", rev = "9e3bc156c8b743f0f997d0b4d0888871e64c78ed"}
+up-rust = { git = "https://github.com/eclipse-uprotocol/up-rust"} #rev = "68c8a1d94f0006daf4ba135c9cbbfddcd793108d" }
+#up-rust = { git = "https://github.com/PLeVasseur/uprotocol-rust_fork.git", rev = "9e3bc156c8b743f0f997d0b4d0888871e64c78ed"} 
 base64 = { version = "0.22.0"}
 serde = { version = "1.0", features = ["derive"] }
 #serde_json = { version = "1.0" }
