@@ -22,18 +22,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-use log::kv::{value, ToValue};
-//use crate::constants::*;
+
 use serde_json::Value;
-//use serde::{Serialize, Deserialize};
 use serde::{Deserialize, Deserializer};
-//use std::io::Read;
 use up_rust::{
     Data, UAttributes, UAuthority, UCode, UEntity, UMessage, UMessageType, UPayload,
     UPayloadFormat, UPriority, UResource, UUri, UUID,
 };
 
-use protobuf::{MessageDyn, MessageField, SpecialFields};
+use protobuf::{MessageField, SpecialFields};
 
 pub fn convert_json_to_jsonstring<T: serde::Serialize>(value: &T) -> String {
     serde_json::to_string(value).expect("Failed to convert to JSON string")
@@ -525,23 +522,22 @@ mod tests {
         assert_eq!(result, r#"{"key":"value"}"#);
     }
 
-    // Write more test cases for other functions...
 }
 
 
-use prost::Message; // Import the prost crate for protobuf message handling
+// use prost::Message; // Import the prost crate for protobuf message handling
 use std::fmt::Debug;
 
 // Function to serialize any protobuf message to JSON string
-fn protobuf_to_json<M: Message>(message: &M) -> Result<String, serde_json::Error> {
-    // Serialize the protobuf message to bytes
-    let bytes = message.encode_to_vec();
+// fn protobuf_to_json<M: Message>(message: &M) -> Result<String, serde_json::Error> {
+//     // Serialize the protobuf message to bytes
+//     let bytes = message.encode_to_vec();
 
-    // Deserialize the bytes into a JSON value
-    let json_value = serde_json::from_slice(&bytes)?;
+//     // Deserialize the bytes into a JSON value
+//     let json_value = serde_json::from_slice(&bytes)?;
 
-    // Serialize the JSON value into a JSON string
-    let json_string = serde_json::to_string(&json_value)?;
+//     // Serialize the JSON value into a JSON string
+//     let json_string = serde_json::to_string(&json_value)?;
 
-    Ok(json_string)
-}
+//     Ok(json_string)
+// }

@@ -23,17 +23,10 @@
  */
 
 use async_trait::async_trait;
-use env_logger::fmt::Formatter;
-use log::kv::ToValue;
-use protobuf::MessageField;
-//use serde_json::ser::Formatter;
 use serde_json::Value;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
-use up_rust::{UCode, UListener, UUIDBuilder};
+use up_rust::{UCode, UListener};
 use up_rust::{UMessage, UStatus, UTransport};
 
-use std::fmt::Debug;
 use std::io::{Read, Write};
 use std::{
     collections::HashMap,
@@ -42,8 +35,6 @@ use std::{
 
 use serde::Serialize;
 
-
-//use crate::u_transport_socket::UtrasnsportSocket;
 use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
 use crate::*;
 
@@ -55,43 +46,23 @@ pub struct JsonResponseData {
 }
 
 pub struct SocketTestAgent {
-    utransport: UtrasnsportSocket,
+    utransport: UtransportSocket,
     clientsocket: Arc<Mutex<TcpStreamSync>>,
     clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
     listner_map: Vec<String>,
 }
-use prost::Message;
-//use prost_json::Message as JsonMessage;
+
 #[async_trait]
-impl UListener for SocketTestAgent {
-    
-    
-
-
-    
-    
+impl UListener for SocketTestAgent {    
     
     async fn on_receive(&self, msg: UMessage) {
         dbg!("Listener onreceived:", msg.clone());
-        println!("Listener onreceived:{}", msg.clone());
-        let mut json_message = JsonResponseData {
-            action: "onReceive".to_owned(),
+        let json_message = JsonResponseData {
+            action: constants::RESPONSE_ON_RECEIVE.to_owned(),
             data: HashMap::new(),
             ue: "rust".to_string(),
         };
-        //json_message.data = msg.clone().to_string().to_value().to_string();
-       
-  // Serialize the protobuf message to bytes
- 
-  //let bytes = msg.to_string().as_bytes();
 
-  // Deserialize the bytes into a JSON value
-  //let json_value = serde_json::from_slice(&bytes).expect("issue in converting to sting ");
-
-  // Serialize the JSON value into a JSON string
-  //let json_string = serde_json::to_string(&json_value).expect("issue in converting to sting ");
-
-  
         <SocketTestAgent as Clone>::clone(&self)
             .send_to_tm(json_message)
             .await;
@@ -105,10 +76,10 @@ impl UListener for SocketTestAgent {
 impl Clone for SocketTestAgent {
     fn clone(&self) -> Self {
         SocketTestAgent {
-            utransport: self.utransport.clone(), // Assuming UtrasnsportSocket implements Clone
+            utransport: self.utransport.clone(),
             clientsocket: self.clientsocket.clone(),
             clientsocket_to_tm:self.clientsocket_to_tm.clone(),
-            listner_map: self.listner_map.clone(), // Clone Vec<String>
+            listner_map: self.listner_map.clone(),
         }
     }
 
@@ -118,7 +89,7 @@ impl Clone for SocketTestAgent {
 }
 
 impl SocketTestAgent {
-    pub fn new(test_clientsocket: TcpStreamSync, test_clientsocket_to_tm : TcpStreamSync, utransport: UtrasnsportSocket) -> Self {
+    pub fn new(test_clientsocket: TcpStreamSync, test_clientsocket_to_tm : TcpStreamSync, utransport: UtransportSocket) -> Self {
         let socket = Arc::new(Mutex::new(test_clientsocket));
         let socket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
         let clientsocket = socket;
@@ -177,17 +148,14 @@ impl SocketTestAgent {
             let json_msg: Value = serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
-            dbg!("JSONMSG");
-           // dbg!(json_msg);
             
             let json_str_ref = action.as_str().expect("issue in converting value to string");
             dbg!("json data json_str_ref: {:?}", json_str_ref);
 
             let status = match json_str_ref {
                 SEND_COMMAND => {
-                    let mut wu_message: WrapperUMessage =
+                    let wu_message: WrapperUMessage =
                         serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
-                     //   dbg!( wu_message.0.clone());
                     let  u_message = wu_message.0;
                     action_str = constants::SEND_COMMAND;
                     self.utransport.send(u_message).await
@@ -195,26 +163,21 @@ impl SocketTestAgent {
 
                 REGISTER_LISTENER_COMMAND => {
                     let cloned_listener = Arc::clone(&arc_self);
-                    // dbg!("Callable?");
-                    // arc_self.on_receive(UMessage::default()).await;
-                    // dbg!("Callable!");
 
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
-                   // dbg!( wu_uuri.0.clone());
                     let u_uuri = wu_uuri.0;
                     action_str = constants::REGISTER_LISTENER_COMMAND;
                     self.utransport
                         .register_listener(
                             u_uuri,
-                            Arc::clone(&cloned_listener) as Arc<dyn UListener>, /*&cloned_listener*/
+                            Arc::clone(&cloned_listener) as Arc<dyn UListener>,
                         )
                         .await
-                } // Assuming listener can be cloned
+                }
 
                 UNREGISTER_LISTENER_COMMAND => {
                     let cloned_listener = Arc::clone(&arc_self);
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
-                //    dbg!( wu_uuri.0.clone());
                     let u_uuri = wu_uuri.0;
                     action_str = constants::UNREGISTER_LISTENER_COMMAND;
                     self.utransport
@@ -223,22 +186,18 @@ impl SocketTestAgent {
                             Arc::clone(&cloned_listener) as Arc<dyn UListener>, /*&cloned_listener*/
                         )
                         .await
-                } // Assuming listener can be cloned
+                }
 
-                _ => Ok({ () }), // Modify with appropriate handling
+                _ => Ok(())
             };
-
 
             // Create an empty HashMap to store the fields of the message
             let mut status_dict:HashMap<String, String> = HashMap::new();
 
             match status {
                 Ok(()) => {
-                    // Handle the case when status is Ok
-                    let status = UStatus::default(); // Replace this with your actual status object
+                    let status = UStatus::default();
                     status_dict.insert("message".to_string(), status.message.clone().unwrap_or_default());
-                    //status_dict.insert("code".to_string(), status.code);
-                    // Add more fields as needed
                 }
                 Err(u_status) => {
                     // Handle the case when status is an error
@@ -284,13 +243,12 @@ impl SocketTestAgent {
      fn inform_tm_ta_starting(self) {
         let sdk_init = r#"{"ue":"rust","data":{"SDK_name":"rust"},"action":"initialize"}"#;
 
-        //infor TM that rust TA is running
+        //inform TM that rust TA is running
         dbg!("Sending SDK name to Test Manager!");
         let message = sdk_init.as_bytes();
 
         let socket_clone = self.clientsocket.clone();
-        //socket_clone.write_all(message);
-        let  retun_value = socket_clone
+        let _ = socket_clone
             .lock()
             .expect("error in sending data to TM")
             .write_all(message);
@@ -301,7 +259,7 @@ impl SocketTestAgent {
         let json_message_str = convert_json_to_jsonstring(&json_message);
         let message = json_message_str.as_bytes();
         let socket_clone = self.clientsocket_to_tm.clone();
-        let result = socket_clone
+        let _result = socket_clone
             .try_lock()
             .expect("error in sending data to TM")
             .write_all(message);
