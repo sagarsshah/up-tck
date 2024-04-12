@@ -84,7 +84,7 @@ impl UListener for SocketTestAgent {
        //     Some(data) => data.to, // If Some, call `to_string()` on the data
          //   None => String::from("None"),   // If None, return a default string or handle as you wish
         //};
-        json_message.data.insert("data".into(),__data.into());
+        json_message.data.insert("payload".into(),__data.into());
        
         <SocketTestAgent as Clone>::clone(&self)
             .send_to_tm(json_message)

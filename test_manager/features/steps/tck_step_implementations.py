@@ -167,7 +167,7 @@ def receive_status(context, field, field_value):
 def receive_value_as_bytes(context, sdk_name, key, value):
     try:
         value = value.strip()
-        val = access_nested_dict(context.on_receive_msg[sdk_name], key)
+        val = access_nested_dict(context, context.on_receive_msg[sdk_name], key)
         rec_field_value = base64.b64decode(val.encode('utf-8'))
         assert rec_field_value.split(b'googleapis.com/')[1] == value.encode('utf-8').split(b'googleapis.com/')[1]
     except KeyError as ke:
@@ -182,7 +182,11 @@ def receive_value_as_bytes(context, sdk_name, key, value):
 @then(u'"{sdk_name}" receives rpc response having "{key}" as b"{value}"')
 def receive_rpc_response_as_bytes(context, sdk_name, key, value):
     try:
-        val = access_nested_dict(context.on_receive_rpc_response[sdk_name], key)
+        context.logger.info(sdk_name)
+        if sdk_name == "rust":
+            val = context.on_receive_rpc_response[sdk_name][key.split('.')[0]]
+        else:
+            val = access_nested_dict(context.on_receive_rpc_response[sdk_name], key)
         rec_field_value = base64.b64decode(val.encode('utf-8'))
         print(rec_field_value)
         # Convert bytes to byte string with escape sequences
@@ -197,7 +201,7 @@ def receive_rpc_response_as_bytes(context, sdk_name, key, value):
         raise ValueError(f"Expection occured. {ae}")
 
 
-def access_nested_dict(dictionary, keys):
+def access_nested_dict(context, dictionary, keys):
     keys = keys.split('.')
     value = dictionary
     for key in keys:
