@@ -86,7 +86,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         _authority.special_fields = _special_fields;
 
       //  dbg!("_authority: {:?}", _authority);
-        let ___authority = MessageField(Some(Box::new(_authority)));
+       
 
         //update entity
         let _entity_name = match value.get("entity").and_then(|entity| entity.get("name")) {
@@ -130,9 +130,18 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         let _entity_special_fields = SpecialFields::default();
         let mut _entity = UEntity::new();
         _entity.name = _entity_name.unwrap_or_default().to_string();
-        _entity.id = Some(_entity_id);
-        _entity.version_major = Some(_entity_version_major);
-        _entity.version_minor = Some(_entity_version_minor);
+        if!(_entity_id == 0)
+        {
+        _entity.id = Some(_entity_id)
+        };
+        if!(_entity_version_major == 0)
+        {
+        _entity.version_major = Some(_entity_version_major)
+        };
+        if!(_entity_version_minor == 0)
+        {
+        _entity.version_minor = Some(_entity_version_minor)
+        };
         _entity.special_fields = _entity_special_fields;
       //  dbg!("_entity: {:?}", _entity);
         let ___entity = MessageField(Some(Box::new(_entity)));
@@ -175,19 +184,25 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         _resource.name = _resource_name.to_owned();
         _resource.instance = _resource_instance;
         _resource.message = _resource_message;
-        _resource.id = Some(_resource_id);
+        if!(_resource_id == 0)
+        {
+        _resource.id = Some(_resource_id)
+    };
 
      //   dbg!("_resource: {:?}", _resource);
         let ___resource = MessageField(Some(Box::new(_resource)));
         // special field //todo
         let _special_fields = SpecialFields::default();
+let mut _uuri:UUri = UUri::new();
+if!(_authority.clone() == UAuthority::default()){
+    
+    _uuri.authority = MessageField(Some(Box::new(_authority)));
+    }
+    _uuri.entity = ___entity;
+    _uuri.resource = ___resource;
 
-        Ok(WrapperUUri(UUri {
-            authority: ___authority,
-            entity: ___entity,
-            resource: ___resource,
-            special_fields: _special_fields,
-        }))
+
+        Ok(WrapperUUri(_uuri))
     }
 }
 #[derive(Default)]
@@ -509,6 +524,9 @@ impl<'de> Deserialize<'de> for WrapperUMessage {
         }))
     }
 }
+
+
+
 
 #[cfg(test)]
 mod tests {
