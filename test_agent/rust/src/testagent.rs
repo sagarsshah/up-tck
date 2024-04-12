@@ -24,7 +24,7 @@
 
 use async_trait::async_trait;
 use serde_json::Value;
-use up_rust::{UCode, UListener};
+use up_rust::{Data, UCode, UListener};
 use up_rust::{UMessage, UStatus, UTransport};
 
 use std::io::{Read, Write};
@@ -58,7 +58,22 @@ impl UListener for SocketTestAgent {
     async fn on_receive(&self, msg: UMessage) {
         dbg!("Listener onreceived:", msg.clone());
        
-        let _data = format!("{:?}",msg.payload.data);
+
+        let __data = match &msg.payload.data {
+            Some(data) => {
+                // Now we have access to the Data enum
+                match data {Data::Reference(reference)=>{reference.to_string()}Data::Value(value)=> {let value_str=String::from_utf8_lossy(value);value_str.to_string()},
+    _ => "none".into(), }
+            }
+            None => {
+                println!("No data available");
+                "none".into()
+            }
+        };
+
+
+
+       // let _data = format!("{:?}",msg.payload.data);
         let mut json_message: JsonResponseData = JsonResponseData {
             action: constants::RESPONSE_ON_RECEIVE.to_owned(),
             data: HashMap::new(),
@@ -69,7 +84,7 @@ impl UListener for SocketTestAgent {
        //     Some(data) => data.to, // If Some, call `to_string()` on the data
          //   None => String::from("None"),   // If None, return a default string or handle as you wish
         //};
-        json_message.data.insert("data".into(),_data.into());
+        json_message.data.insert("data".into(),__data.into());
        
         <SocketTestAgent as Clone>::clone(&self)
             .send_to_tm(json_message)
