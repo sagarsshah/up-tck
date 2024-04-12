@@ -56,8 +56,7 @@ pub struct SocketTestAgent {
 impl UListener for SocketTestAgent {    
     
     async fn on_receive(&self, msg: UMessage) {
-        dbg!("Listener onreceived:", msg.clone());
-       
+        dbg!("OnReceive called");
 
         let __payload = match &msg.payload.data {
             Some(data) => {
@@ -79,8 +78,6 @@ impl UListener for SocketTestAgent {
         _payload.insert("payload".into(),_value_str);
         let _payload_str = serde_json::to_string(&_payload).expect("issue in converting to payload");
 
-
-       // let _data = format!("{:?}",msg.payload.data);
         let mut json_message: JsonResponseData = JsonResponseData {
             action: constants::RESPONSE_ON_RECEIVE.to_owned(),
             data: HashMap::new(),
@@ -177,7 +174,6 @@ impl SocketTestAgent {
             let json_data_value = json_msg["data"].clone();
             
             let json_str_ref = action.as_str().expect("issue in converting value to string");
-            dbg!("json data json_str_ref: {:?}", json_str_ref);
 
             let status = match json_str_ref {
                 SEND_COMMAND => {
@@ -284,7 +280,6 @@ impl SocketTestAgent {
     async fn send_to_tm(self, json_message: JsonResponseData) {
 
         let json_message_str = convert_json_to_jsonstring(&json_message);
-        dbg!(json_message_str.clone());
         let message = json_message_str.as_bytes();
         
         let socket_clone = self.clientsocket_to_tm.clone();

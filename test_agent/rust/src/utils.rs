@@ -77,16 +77,17 @@ impl<'de> Deserialize<'de> for WrapperUUri {
                 default
             }
         };
-        let _special_fields = SpecialFields::default();
 
         let mut _authority = UAuthority::new();
-        _authority.name = _authority_name.map(|s| s.to_string());
-        _authority.set_id(_authority_number_id);
-        _authority.set_ip(_authority_number_ip);
-        _authority.special_fields = _special_fields;
-
-      //  dbg!("_authority: {:?}", _authority);
-       
+        if!( _authority_name.clone() == Some("default")){
+            _authority.name = _authority_name.map(|s| s.to_string());
+        }
+        if!(_authority_number_id.clone() == vec![0]){
+            _authority.set_id(_authority_number_id.clone());
+        }
+        if!(_authority_number_ip.clone() == vec![0]){
+            _authority.set_ip(_authority_number_ip.clone());
+        }
 
         //update entity
         let _entity_name = match value.get("entity").and_then(|entity| entity.get("name")) {
@@ -189,14 +190,12 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         _resource.id = Some(_resource_id)
     };
 
-     //   dbg!("_resource: {:?}", _resource);
         let ___resource = MessageField(Some(Box::new(_resource)));
-        // special field //todo
         let _special_fields = SpecialFields::default();
-let mut _uuri:UUri = UUri::new();
-if!(_authority.clone() == UAuthority::default()){
-    
-    _uuri.authority = MessageField(Some(Box::new(_authority)));
+    let mut _uuri:UUri = UUri::new();
+    if!(_authority_name.clone() == Some("default") && _authority_number_id.clone() == vec![0] && _authority_number_ip.clone() == vec![0]){
+        dbg!("authority is not default");
+        _uuri.authority = MessageField(Some(Box::new(_authority)));
     }
     _uuri.entity = ___entity;
     _uuri.resource = ___resource;
@@ -213,7 +212,6 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-      //  dbg!("WrapperUAttribute: {:?}", value);
         // Conversion function from string to enum variant
         fn from_str_comstatus(s: &str) -> UCode {
             match s {
@@ -412,7 +410,6 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             _uattributes.reqid = __reqid;
             _uattributes.token= Some(_token.to_owned());
             _uattributes.traceparent = Some(_traceparent.to_owned());
-           // dbg!(_uattributes.clone());
         
         Ok(WrapperUAttribute( _uattributes))
     }
@@ -425,7 +422,6 @@ impl<'de> Deserialize<'de> for WrapperUPayload {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-      //  dbg!("WrapperUPayload: {:?}", value);
 
         fn from_str_format(s: &str) -> UPayloadFormat {
             match s {
@@ -465,12 +461,10 @@ impl<'de> Deserialize<'de> for WrapperUPayload {
         
          
         let _data = match value.get("value") {
-            //Some(_data) => Data::Reference(_data.to_string().parse().unwrap()),
             Some(_data) => Data::Value( serde_json::to_vec(_data).expect("error in converting data value to vector")),
             None => Data::Reference(0),
         };
 
-        // special field //todo
         let _special_fields = SpecialFields::default();
 
         Ok(WrapperUPayload(UPayload {
@@ -492,9 +486,6 @@ impl<'de> Deserialize<'de> for WrapperUMessage {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-      //  dbg!("WrapperUMessage: {:?} \n", value);
-        // let test:UMessage  = value.clone().into();
-        // dbg!("WrapperUMessage after into_proto: {:?}\n", value.clone().into_proto());
 
         let wattributes = match value.get("attributes") {
             Some(attributes) => {

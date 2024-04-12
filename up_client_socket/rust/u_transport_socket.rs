@@ -79,7 +79,6 @@ impl UtransportExt for UtransportSocket {
      fn socket_init(&mut self) {
         loop {
             // Receive data from the socket
-            print!("socket init is waiting for read data..");
             let mut buffer: [u8; BYTES_MSG_LENGTH] = [0; BYTES_MSG_LENGTH];
 
             let bytes_read = match self.read_socket(&mut buffer) {
@@ -128,6 +127,7 @@ impl UtransportExt for UtransportSocket {
         // Create a new Tokio runtime
         let rt = Runtime::new().unwrap();
    
+        dbg!(&umsg.attributes.source.to_string());
     
         if let Some(listner_array) = self
             .listner_map
@@ -312,8 +312,6 @@ impl UTransport for UtransportSocket {
         topic: UUri,
         listener: Arc<dyn UListener>,
     ) -> Result<(), UStatus> {
-        //let listener = Arc::new(listener);
-        // self.listner_map.lock().unwrap().insert(topic.to_string(),listener);
         dbg!("register listner called !");
         if topic.authority.is_some() && topic.entity.is_none() && topic.resource.is_none() {
             // This is special UUri which means we need to register for all of Publish, Request, and Response
@@ -333,10 +331,9 @@ impl UTransport for UtransportSocket {
                     .unwrap()
                     .entry(topic.to_string())
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    //.or_insert_with(|| vec![listener]);
                     .or_insert_with(|| vec![Arc::clone(&listener)as Arc<dyn UListener>]);
 
-                Ok(/*"register listner successful".to_string*/ ())
+                Ok(())
             } else if UriValidator::is_rpc_method(&topic) {
                 self.listner_map
                     .lock()
@@ -345,7 +342,7 @@ impl UTransport for UtransportSocket {
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
                 dbg!("register listner called for rpc !");
-                Ok(/*"register listner successful".to_string*/ ())
+                Ok(())
             } else {
                 self.listner_map
                     .lock()
@@ -354,7 +351,6 @@ impl UTransport for UtransportSocket {
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
                 dbg!("register listner called for topic !");
-                //Ok(/*"register listner successful".to_string()*/ ())
                 Err(UStatus::ok())
             }
         }
@@ -395,6 +391,5 @@ impl UTransport for UtransportSocket {
         }
 
         Err(UStatus::ok())
-        //UStatus { code: up_rust::UCode::OK, message: "OK", details: todo!(), special_fields: todo!() }
     }
 }
