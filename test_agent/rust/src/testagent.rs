@@ -178,7 +178,7 @@ impl SocketTestAgent {
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
             dbg!("JSONMSG");
-            dbg!(json_msg);
+           // dbg!(json_msg);
             
             let json_str_ref = action.as_str().expect("issue in converting value to string");
             dbg!("json data json_str_ref: {:?}", json_str_ref);
@@ -187,7 +187,7 @@ impl SocketTestAgent {
                 SEND_COMMAND => {
                     let mut wu_message: WrapperUMessage =
                         serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
-                        dbg!( wu_message.0.clone());
+                     //   dbg!( wu_message.0.clone());
                     let  u_message = wu_message.0;
                     action_str = constants::SEND_COMMAND;
                     self.utransport.send(u_message).await
@@ -200,7 +200,7 @@ impl SocketTestAgent {
                     // dbg!("Callable!");
 
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
-                    dbg!( wu_uuri.0.clone());
+                   // dbg!( wu_uuri.0.clone());
                     let u_uuri = wu_uuri.0;
                     action_str = constants::REGISTER_LISTENER_COMMAND;
                     self.utransport
@@ -214,7 +214,7 @@ impl SocketTestAgent {
                 UNREGISTER_LISTENER_COMMAND => {
                     let cloned_listener = Arc::clone(&arc_self);
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
-                    dbg!( wu_uuri.0.clone());
+                //    dbg!( wu_uuri.0.clone());
                     let u_uuri = wu_uuri.0;
                     action_str = constants::UNREGISTER_LISTENER_COMMAND;
                     self.utransport

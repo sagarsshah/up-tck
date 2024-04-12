@@ -153,6 +153,7 @@ fn main() {
 
           // Spawn a blocking task within the runtime
           let blocking_task = tokio::task::spawn_blocking(move || {
+            println!("calling socket_init..");
               transport_socket.socket_init();
           });
 
