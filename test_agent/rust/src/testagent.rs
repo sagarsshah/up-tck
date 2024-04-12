@@ -59,7 +59,7 @@ impl UListener for SocketTestAgent {
         dbg!("Listener onreceived:", msg.clone());
        
 
-        let __data = match &msg.payload.data {
+        let __payload = match &msg.payload.data {
             Some(data) => {
                 // Now we have access to the Data enum
                 match data {Data::Reference(reference)=>{reference.to_string()}Data::Value(value)=> {let value_str=String::from_utf8_lossy(value);value_str.to_string()},
@@ -71,6 +71,13 @@ impl UListener for SocketTestAgent {
             }
         };
 
+        let mut _value:HashMap<String,String> =  HashMap::new();
+        _value.insert("value".into(),__payload.into());
+        let _value_str = serde_json::to_string(&_value).expect("issue in converting to payload");
+       
+        let mut _payload:HashMap<String,String> =  HashMap::new();
+        _payload.insert("payload".into(),_value_str);
+        let _payload_str = serde_json::to_string(&_payload).expect("issue in converting to payload");
 
 
        // let _data = format!("{:?}",msg.payload.data);
@@ -80,11 +87,8 @@ impl UListener for SocketTestAgent {
             ue: "rust".to_string(),
         };
         
-     //   let _data = match &msg.payload.data {
-       //     Some(data) => data.to, // If Some, call `to_string()` on the data
-         //   None => String::from("None"),   // If None, return a default string or handle as you wish
-        //};
-        json_message.data.insert("payload".into(),__data.into());
+
+        json_message.data.insert("data".into(),_payload_str);
        
         <SocketTestAgent as Clone>::clone(&self)
             .send_to_tm(json_message)
