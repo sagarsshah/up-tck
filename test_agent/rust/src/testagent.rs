@@ -57,12 +57,20 @@ impl UListener for SocketTestAgent {
     
     async fn on_receive(&self, msg: UMessage) {
         dbg!("Listener onreceived:", msg.clone());
-        let json_message = JsonResponseData {
+       
+        let _data = format!("{:?}",msg.payload.data);
+        let mut json_message: JsonResponseData = JsonResponseData {
             action: constants::RESPONSE_ON_RECEIVE.to_owned(),
             data: HashMap::new(),
             ue: "rust".to_string(),
         };
-
+        
+     //   let _data = match &msg.payload.data {
+       //     Some(data) => data.to, // If Some, call `to_string()` on the data
+         //   None => String::from("None"),   // If None, return a default string or handle as you wish
+        //};
+        json_message.data.insert("data".into(),_data.into());
+       
         <SocketTestAgent as Clone>::clone(&self)
             .send_to_tm(json_message)
             .await;
@@ -257,7 +265,9 @@ impl SocketTestAgent {
     async fn send_to_tm(self, json_message: JsonResponseData) {
 
         let json_message_str = convert_json_to_jsonstring(&json_message);
+        dbg!(json_message_str.clone());
         let message = json_message_str.as_bytes();
+        
         let socket_clone = self.clientsocket_to_tm.clone();
         let _result = socket_clone
             .try_lock()
