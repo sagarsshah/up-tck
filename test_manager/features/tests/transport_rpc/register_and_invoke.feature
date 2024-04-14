@@ -33,9 +33,8 @@ Feature: Testing RPC Functionality
     And sets "resource.instance" to "front_left"
     And sets "resource.message" to "Door"
     When sends "registerlistener" request
-    And user waits "2" second
     Then the status received with "code" is "OK"
-#
+    
     Given "<uE2>" creates data for "invokemethod"
     And sets "entity.name" to "body.access"
     And sets "resource.name" to "door"
@@ -46,9 +45,8 @@ Feature: Testing RPC Functionality
     And sets "payload.value" to b".type.googleapis.com/google.protobuf.Int32Value\x12\x02\x08\x03"
 
     When sends "invokemethod" request
-    And user waits "8" second
 
-    Then "<uE2>" receives rpc response having "payload.value" as b"\n/type.googleapis.com/google.protobuf.StringValue\x12\x14\n\x12SuccessRPCResponse"
+    Then "<uE2>" receives data field "payload.value" as b"\n/type.googleapis.com/google.protobuf.StringValue\x12\x14\n\x12SuccessRPCResponse"
 
     Given "<uE1>" creates data for "unregisterlistener"
     And sets "entity.name" to "body.access"
@@ -56,7 +54,7 @@ Feature: Testing RPC Functionality
     And sets "resource.instance" to "front_left"
     And sets "resource.message" to "Door"
     When sends "unregisterlistener" request
-    And user waits "2" second
+
     Then the status received with "code" is "OK"
 
     Examples:
