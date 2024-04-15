@@ -142,8 +142,16 @@ class Dispatcher:
         self.dispatcher_exit = True
         for utransport_socket in self.connected_sockets.copy():
             self._close_connected_socket(utransport_socket)
+        # Close server socket
+        try:
+            self.selector.unregister(self.server)
+            self.server.close()
+            logger.info("Server socket closed!")
+        except Exception as e:
+            logger.error(f"Error closing server socket: {e}")
+
+        # Close selector
         self.selector.close()
-        self.server.close()
         logger.info("Dispatcher closed!")
 
 

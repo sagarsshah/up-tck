@@ -25,8 +25,8 @@
 # -------------------------------------------------------------------------
 Feature: Local and Remote URI de-serialization
 
-  Scenario Outline: Testing the local uri deserializer
-    Given "<uE1>" creates data for "micro_deserialize_uri"
+  Scenario Outline: Testing the local uri deserializer - python
+    Given "python" creates data for "micro_deserialize_uri"
     When sends a "micro_deserialize_uri" request with micro serialized input "<micro_serialized_uri_as_base64_str>"
 
     Then the deserialized uri received should have the following properties:
@@ -40,29 +40,48 @@ Feature: Local and Remote URI de-serialization
       | resource.name        | <resource_name>        |
       | resource.instance    | <resource_instance>    |
       | resource.message     | <resource_message>     |
-    Examples:
-      | uE1    | authority_id       | authority_name | entity_id | entity_name | entity_version_major | resource_id | resource_name | resource_instance | resource_message | micro_serialized_uri_as_base64_str |
-      | python |                    |                | 0         |             | 0                    | 0           |               |                   |                  | <empty>                      |
-      | python |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA= |
-      | python |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA= |
-      | python |                    |                | 1         |             | 1                    | 1           | rpc           |                   |                  | AQAAAQABAQA= |
-      | python |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA= |
-      | python |                    |                | 2         |             | 1                    | 3           | rpc           |                   |                  | AQAAAwACAQA= |
-      | python |                    |                | 0         |             | 0                    | 0           | rpc           |                   |                  | AQAAAAAAAAA= |
-      | python |                    |                | 100       |             | 1                    | 300         | rpc           |                   |                  | AQABLABkAQA= |
-      | python |                    |                | 255       |             | 0                    | 255         | rpc           |                   |                  | AQAA/wD/AAA= |
-      | python |                    |                | 256       |             | 1                    | 256         | rpc           |                   |                  | AQABAAEAAQA= |
-      | python | unique id 1234     |                | 29999     |             | 254                  | 99          | rpc           |                   |                  | AQMAY3Uv/gAOdW5pcXVlIGlkIDEyMzQ= |
 
-    
-      | java   |                    |                | 0         |             | 0                    | 0           |               |                   |                  | <empty>                      |
-      | java   |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA= |
-      | java   |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA= |
-      | java   |                    |                | 1         |             | 1                    | 1           | rpc           |                   |                  | AQAAAQABAQA= |
-      | java   |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA= |
-      | java   |                    |                | 2         |             | 1                    | 3           | rpc           |                   |                  | AQAAAwACAQA= |
-      #| java   |                    |                | 0         |             | 0                    | 0           | rpc           |                   |                  | AQAAAAAAAAA= |
-      | java   |                    |                | 100       |             | 1                    | 300         | rpc           |                   |                  | AQABLABkAQA= |
-      | java   |                    |                | 255       |             | 0                    | 255         | rpc           |                   |                  | AQAA/wD/AAA= |
-      | java   |                    |                | 256       |             | 1                    | 256         | rpc           |                   |                  | AQABAAEAAQA= |
-      | java   | unique id 1234     |                | 29999     |             | 254                  | 99          | rpc           |                   |                  | AQMAY3Uv/gAOdW5pcXVlIGlkIDEyMzQ= |
+    Examples:
+      | authority_id       | authority_name | entity_id | entity_name | entity_version_major | resource_id | resource_name | resource_instance | resource_message | micro_serialized_uri_as_base64_str |
+      |                    |                | 0         |             | 0                    | 0           |               |                   |                  | <empty>                            |
+      |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA=                       |
+      |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA=                       |
+      |                    |                | 1         |             | 1                    | 1           | rpc           |                   |                  | AQAAAQABAQA=                       |
+      |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA=                       |
+      |                    |                | 2         |             | 1                    | 3           | rpc           |                   |                  | AQAAAwACAQA=                       |
+      |                    |                | 0         |             | 0                    | 0           | rpc           |                   |                  | AQAAAAAAAAA=                       |
+      |                    |                | 100       |             | 1                    | 300         | rpc           |                   |                  | AQABLABkAQA=                       |
+      |                    |                | 255       |             | 0                    | 255         | rpc           |                   |                  | AQAA/wD/AAA=                       |
+      |                    |                | 256       |             | 1                    | 256         | rpc           |                   |                  | AQABAAEAAQA=                       |
+      | unique id 1234     |                | 29999     |             | 254                  | 99          | rpc           |                   |                  | AQMAY3Uv/gAOdW5pcXVlIGlkIDEyMzQ=   |
+
+
+  Scenario Outline: Testing the local uri deserializer - java
+    Given "java" creates data for "micro_deserialize_uri"
+    When sends a "micro_deserialize_uri" request with micro serialized input "<micro_serialized_uri_as_base64_str>"
+
+    Then the deserialized uri received should have the following properties:
+      | Field                | Value                  |
+      | authority.id         | <authority_id>         |
+      | authority.name       | <authority_name>       |
+      | entity.id            | <entity_id>            |
+      | entity.name          | <entity_name>          |
+      | entity.version_major | <entity_version_major> |
+      | resource.id          | <resource_id>          |
+      | resource.name        | <resource_name>        |
+      | resource.instance    | <resource_instance>    |
+      | resource.message     | <resource_message>     |
+
+    Examples:
+      | authority_id       | authority_name | entity_id | entity_name | entity_version_major | resource_id | resource_name | resource_instance | resource_message | micro_serialized_uri_as_base64_str |
+      |                    |                | 0         |             | 0                    | 0           |               |                   |                  | <empty>                            |
+      |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA=                       |
+      |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA=                       |
+      |                    |                | 1         |             | 1                    | 1           | rpc           |                   |                  | AQAAAQABAQA=                       |
+      |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA=                       |
+      |                    |                | 2         |             | 1                    | 3           | rpc           |                   |                  | AQAAAwACAQA=                       |
+      # |                    |                | 0         |             | 0                    | 0           | rpc           |                   |                  | AQAAAAAAAAA=                       |
+      |                    |                | 100       |             | 1                    | 300         | rpc           |                   |                  | AQABLABkAQA=                       |
+      |                    |                | 255       |             | 0                    | 255         | rpc           |                   |                  | AQAA/wD/AAA=                       |
+      |                    |                | 256       |             | 1                    | 256         | rpc           |                   |                  | AQABAAEAAQA=                       |
+      | unique id 1234     |                | 29999     |             | 254                  | 99          | rpc           |                   |                  | AQMAY3Uv/gAOdW5pcXVlIGlkIDEyMzQ=   |
