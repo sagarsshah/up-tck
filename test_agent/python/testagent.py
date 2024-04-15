@@ -173,7 +173,7 @@ def handle_unregister_listener_command(json_msg):
 def handle_invoke_method_command(json_msg):
     uri = dict_to_proto(json_msg["data"], UUri())
     payload = dict_to_proto(json_msg["data"]["payload"], UPayload())
-    res_future: Future = transport.invoke_method(uri, payload, CallOptions())
+    res_future: Future = transport.invoke_method(uri, payload, CallOptions(ttl=10000))
 
     def handle_response(message):
         message: Message = message.result()

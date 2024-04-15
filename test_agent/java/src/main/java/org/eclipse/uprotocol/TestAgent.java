@@ -174,7 +174,7 @@ public class TestAgent {
         UPayload payload = (UPayload) ProtoConverter.dictToProto((Map<String, Object>) data.get("payload"),
                 UPayload.newBuilder());
         CompletionStage<UMessage> responseFuture = transport.invokeMethod(uri, payload,
-                CallOptions.newBuilder().build());
+                CallOptions.newBuilder().setTtl(10000).build());
         responseFuture.whenComplete((responseMessage, exception) -> {
             sendToTestManager(responseMessage, Constant.INVOKE_METHOD_COMMAND, (String) jsonData.get("test_id"));
         });
