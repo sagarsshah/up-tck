@@ -92,6 +92,8 @@ def before_all(context):
     loggerutils.setup_logging()
     loggerutils.setup_formatted_logging(context)
 
+    context.logger.info("Creating Dispatcher...")
+
     dispatcher = Dispatcher()
     thread = Thread(target=dispatcher.listen_for_client_connections)
     thread.start()

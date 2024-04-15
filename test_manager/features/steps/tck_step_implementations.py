@@ -227,8 +227,6 @@ def receive_value_as_bytes(context, sender_sdk_name: str, field_name: str, expec
             val = access_nested_dict(on_receive_msg["data"], field_name)
             if context.rust_sender:
                 context.rust_sender = False
-                #rec_field_value = base64.b64decode(val.encode('utf-8'))
-                # decoded_string = rec_field_value.decode('utf-8')
                 decoded_string = val.replace("\"", "").replace("\\", "").replace("x", "\\x")[1:]
                 rec_field_value = bytes(decoded_string, "utf-8")
             else:

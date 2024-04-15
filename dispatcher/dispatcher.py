@@ -144,6 +144,7 @@ class Dispatcher:
             self._close_connected_socket(utransport_socket)
         self.selector.close()
         self.server.close()
+        logger.info("Dispatcher closed!")
 
 
 # if __name__ == '__main__':
