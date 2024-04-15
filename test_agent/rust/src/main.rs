@@ -38,42 +38,21 @@ mod testagent;
 use tokio::runtime::Runtime;
 use std::net::TcpStream as TcpStreamSync;
 
-fn main() {
-  let handle = thread::spawn(|| {
-      // Create a new Tokio runtime
-      let rt = Runtime::new().unwrap();
+#[tokio::main]
+async fn main() {
+    let test_agent_socket: TcpStreamSync =
+    TcpStreamSync::connect(TEST_MANAGER_ADDR).expect("issue in connecting  sync socket");
+    let test_agent_socket_to_tm: TcpStreamSync =
+    TcpStreamSync::connect(TEST_MANAGER_ADDR).expect("issue in connecting  sync socket");
 
+    let mut transport_socket = UtransportSocket::new();
+    let transport_socket_clone = transport_socket.clone();
 
-      let test_agent_socket: TcpStreamSync =
-      TcpStreamSync::connect(TEST_MANAGER_ADDR).expect("issue in connecting  sync socket");
-      let test_agent_socket_to_tm: TcpStreamSync =
-      TcpStreamSync::connect(TEST_MANAGER_ADDR).expect("issue in connecting  sync socket");
-      
-      rt.block_on(async {
-          // Spawn a Tokio task to connect to TEST_MANAGER_ADDR asynchronously
-         
-          let mut transport_socket = UtransportSocket::new();
-          let transport_socket_clone = transport_socket.clone();
+    tokio::spawn(async move {
+        // you could add explicit error return from socket_init if you wanted to handle this here
+        transport_socket.socket_init();
+    });
 
-          // Spawn a blocking task within the runtime
-          let blocking_task = tokio::task::spawn_blocking(move || {
-            println!("calling socket_init..");
-            transport_socket.socket_init();
-          });
-
-          // Don't wait for the blocking task to finish
-          tokio::spawn(async move {
-              if let Err(err) = blocking_task.await {
-                  dbg!("Error in socket_init: {}", err);
-                  return;
-              }
-              dbg!("socket_init completed successfully");
-          });
-         
-          let agent = SocketTestAgent::new(test_agent_socket,test_agent_socket_to_tm, transport_socket_clone);
-          agent.clone().receive_from_tm().await;
-      });
-  });
-
-  handle.join().unwrap();
+    let agent = SocketTestAgent::new(test_agent_socket,test_agent_socket_to_tm, transport_socket_clone);
+    agent.lock().await.receive_from_tm().await;
 }
