@@ -33,7 +33,7 @@ use std::thread;
 
 use crate::constants::*;
 use testagent::SocketTestAgent;
-use u_transport_socket::{UtransportExt, UtransportSocket};
+use u_transport_socket::UtransportSocket;
 mod testagent;
 use tokio::runtime::Runtime;
 use std::net::TcpStream as TcpStreamSync;
