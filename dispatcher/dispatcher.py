@@ -81,7 +81,14 @@ class Dispatcher:
 
         :param server: The server socket.
         """
-        up_client_socket, _ = server.accept()
+        try:
+            up_client_socket, _ = server.accept()
+        except OSError as e:
+            if e.errno == errno.EINVAL:
+                print("Error: Invalid argument.")
+                print("Error message:", e.strerror)
+            else:
+                print("Error:", e)
         logger.info(f'accepted conn. {up_client_socket.getpeername()}')
 
         with self.lock:
