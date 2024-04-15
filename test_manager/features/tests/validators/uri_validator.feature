@@ -27,16 +27,16 @@
 Feature: URI Validation
 
   Scenario Outline: Validate different types of URIs
-    Given "<sdk_name>" creates data for "uri_validate"
-    And sets "uri" to "<uri>"
-    And sets "type" to "<validation_type>"
+    Given "<uE1>" creates data for "uri_validate"
+      And sets "uri" to "<uri>"
+      And sets "type" to "<validation_type>"
+
     When sends "uri_validate" request
-    And user waits "1" second
-    Then "<sdk_name>" receives validation result as "<expected_status>"
-    And "<sdk_name>" receives validation message as "<expected_message>"
+      Then receives validation result as "<expected_status>"
+      And  receives validation message as "<expected_message>"
 
     Examples:
-        |sdk_name| uri                                                 | validation_type          | expected_status| expected_message             | 
+        | uE1    | uri                                                 | validation_type          | expected_status| expected_message             | 
         | java   |                                                     | uri                      | False          | Uri is empty.                |
         | java   | //                                                  | uri                      | False          | Uri is empty.                |
         | java   | /neelam                                             | uri                      | True           | none                         |

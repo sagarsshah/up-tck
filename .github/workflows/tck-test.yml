@@ -2,9 +2,9 @@ name: TCK Tests
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "integrate_patrick_changes" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "integrate_patrick_changes" ]
 
 permissions:
   contents: read
@@ -44,6 +44,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 pytest
         pip install -r requirements.txt
+        pip install multimethod
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names

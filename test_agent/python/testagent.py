@@ -48,6 +48,7 @@ from uprotocol.uri.serializer.longuriserializer import LongUriSerializer
 from uprotocol.uri.serializer.microuriserializer import MicroUriSerializer
 from uprotocol.uuid.serializer.longuuidserializer import LongUuidSerializer
 from uprotocol.uuid.factory.uuidfactory import Factories
+from uprotocol.uri.validator.urivalidator import UriValidator
 
 import constants as CONSTANTS
 
@@ -216,6 +217,32 @@ def send_microdeserialize_uri(json_msg: Dict[str, Any]):
     uuri: UUri = MicroUriSerializer().deserialize(micro_serialized_uuri)
     send_to_test_manager(uuri, CONSTANTS.MICRO_DESERIALIZE_URI, received_test_id=json_msg["test_id"])
 
+def handle_uri_validate_command(json_msg):
+    val_type = json_msg["data"]["type"]
+    uri = LongUriSerializer().deserialize(json_msg["data"].get("uri"))
+    
+    validator_func = {
+        "uri": UriValidator.validate,
+        "rpc_response": UriValidator.validate_rpc_response,
+        "rpc_method": UriValidator.validate_rpc_method,
+        "is_empty": UriValidator.is_empty,
+        "is_resolved": UriValidator.is_resolved,
+        "is_micro_form": UriValidator.is_micro_form,
+        "is_long_form_uuri": UriValidator.is_long_form,
+        "is_long_form_uauthority": UriValidator.is_long_form,
+        "is_local": UriValidator.is_local
+    }.get(val_type)
+
+    if validator_func:
+        status = validator_func(uri)
+        if isinstance(status, bool):
+            result = str(status)
+            message = ""
+        else:
+            result = str(status.is_success())
+            message = status.get_message()
+        send_to_test_manager({"result": result, "message": message}, CONSTANTS.VALIDATE_URI, received_test_id=json_msg["test_id"])
+
 
 action_handlers = {CONSTANTS.SEND_COMMAND: handle_send_command,
                    CONSTANTS.REGISTER_LISTENER_COMMAND: handle_register_listener_command,
@@ -225,6 +252,7 @@ action_handlers = {CONSTANTS.SEND_COMMAND: handle_send_command,
                    CONSTANTS.DESERIALIZE_URI: send_longdeserialize_uri,
                    CONSTANTS.SERIALIZE_UUID: send_longserialize_uuid,
                    CONSTANTS.DESERIALIZE_UUID: send_longdeserialize_uuid,
+                   CONSTANTS.VALIDATE_URI: handle_uri_validate_command,
                    CONSTANTS.MICRO_SERIALIZE_URI: send_microserialize_uri,
                    CONSTANTS.MICRO_DESERIALIZE_URI: send_microdeserialize_uri
                    }

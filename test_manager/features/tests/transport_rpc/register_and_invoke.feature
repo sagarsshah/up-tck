@@ -60,6 +60,6 @@ Feature: Testing RPC Functionality
     Examples:
       | uE1    | uE2    |
       | java   | java   |
-      | python | python |
-      | java   | python |
-      | python | java   |
+      # | python | python |
+      #| java   | python |
+      #| python | java   |

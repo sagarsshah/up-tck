@@ -43,6 +43,7 @@ pub struct JsonResponseData {
     data: HashMap<String, String>,
     action: String,
     ue: String,
+    test_id: String
 }
 
 pub struct SocketTestAgent {
@@ -82,6 +83,7 @@ impl UListener for SocketTestAgent {
             action: constants::RESPONSE_ON_RECEIVE.to_owned(),
             data: HashMap::new(),
             ue: "rust".to_string(),
+            test_id: "1".to_string(),
         };
         
 
@@ -172,6 +174,7 @@ impl SocketTestAgent {
             let json_msg: Value = serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
+            let test_id = json_msg["test_id"].clone();
             
             let json_str_ref = action.as_str().expect("issue in converting value to string");
 
@@ -215,7 +218,7 @@ impl SocketTestAgent {
             };
 
             // Create an empty HashMap to store the fields of the message
-            let mut status_dict:HashMap<String, String> = HashMap::new();
+            let mut status_dict:HashMap<String, _> = HashMap::new();
 
             match status {
                 Ok(()) => {
@@ -226,26 +229,26 @@ impl SocketTestAgent {
                     // Handle the case when status is an error
                     // Convert the error message to a string and insert it into the HashMap
                     status_dict.insert("message".to_string(), u_status.message.clone().unwrap_or_default());
-                    let enum_string = match u_status.get_code() {
-                        UCode::OK => "OK",
-                        UCode::INTERNAL => "INTERNAL",
-                        UCode::ABORTED => "ABORTED",
-                        UCode::ALREADY_EXISTS => "ALREADY_EXISTS",
-                        UCode::CANCELLED => "CANCELLED",
-                        UCode::DATA_LOSS => "DATA_LOSS",
-                        UCode::DEADLINE_EXCEEDED => "DEADLINE_EXCEEDED",
-                        UCode::FAILED_PRECONDITION => "FAILED_PRECONDITION",
-                        UCode::INVALID_ARGUMENT => "INVALID_ARGUMENT",
-                        UCode::NOT_FOUND => "NOT_FOUND",
-                        UCode::OUT_OF_RANGE => "OUT_OF_RANGE",
-                        UCode::PERMISSION_DENIED => "PERMISSION_DENIED",
-                        UCode::RESOURCE_EXHAUSTED => "RESOURCE_EXHAUSTED",
-                        UCode::UNAUTHENTICATED => "UNAUTHENTICATED",
-                        UCode::UNAVAILABLE => "UNAVAILABLE",
-                        UCode::UNIMPLEMENTED => "UNIMPLEMENTED",
-                        UCode::UNKNOWN => "UNKNOWN"
+                    let enum_number = match u_status.get_code() {
+                        UCode::OK => 0,
+                        UCode::INTERNAL => 13,
+                        UCode::ABORTED => 10,
+                        UCode::ALREADY_EXISTS => 6,
+                        UCode::CANCELLED => 1,
+                        UCode::DATA_LOSS => 15,
+                        UCode::DEADLINE_EXCEEDED => 4,
+                        UCode::FAILED_PRECONDITION => 9,
+                        UCode::INVALID_ARGUMENT => 3,
+                        UCode::NOT_FOUND => 5,
+                        UCode::OUT_OF_RANGE => 11,
+                        UCode::PERMISSION_DENIED => 7,
+                        UCode::RESOURCE_EXHAUSTED => 8,
+                        UCode::UNAUTHENTICATED => 16,
+                        UCode::UNAVAILABLE => 14,
+                        UCode::UNIMPLEMENTED => 12,
+                        UCode::UNKNOWN => 2
                     };
-                    status_dict.insert("code".to_string(), enum_string.to_string());
+                    status_dict.insert("code".to_string(), enum_number.to_string());
                 }
             }
 
@@ -253,6 +256,7 @@ impl SocketTestAgent {
                 action: action_str.to_owned(),
                 data: status_dict.to_owned(),
                 ue: "rust".to_owned(),
+                test_id: test_id.to_string(),
             };
 
 

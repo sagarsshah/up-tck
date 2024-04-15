@@ -78,6 +78,33 @@ def serialized_uuid_received(context, expected_uuid: str):
                              f"received {actual_uuid}")
     except Exception as ae:
         raise ValueError(f"Expection occured. {ae}")
+    
+@then(u'receives validation result as "{expected_result}"')
+def receive_validation_result(context, expected_result):
+    try:
+        expected_result = expected_result.strip()
+        actual_val_res = context.response_data["result"]
+        assert_that(expected_result, equal_to(actual_val_res))
+    except AssertionError as ae:
+        raise AssertionError(f"Assertion error. Expected is {expected_result} but "
+                             f"received {repr(actual_val_res)}")
+    except Exception as ae:
+        raise ValueError(f"Expection occured. {ae}")
+    
+
+@then(u'receives validation message as "{expected_message}"')
+def receive_validation_result(context, expected_message):
+    if expected_message == "none":
+        return
+    try:
+        expected_message = expected_message.strip()
+        actual_val_msg = context.response_data["message"]
+        assert_that(expected_message, equal_to(actual_val_msg))
+    except AssertionError as ae:
+        raise AssertionError(f"Assertion error. Expected is {expected_message} but "
+                             f"received {repr(actual_val_msg)}")
+    except Exception as ae:
+        raise ValueError(f"Expection occured. {ae}")
 
 
 @when(u'sends a "{command}" request with serialized input "{serialized}"')
@@ -178,7 +205,7 @@ def receive_status(context, field_name: str, expected_value: str):
     try:
         actual_value: str = context.response_data[field_name]
         expected_value: int = getattr(UCode, expected_value)
-        assert_that(expected_value, equal_to(actual_value))
+        assert_that(expected_value, equal_to(int(actual_value)))
     except AssertionError as ae:
         raise AssertionError(f"Assertion error. Expected is {expected_value} but "
                              f"received {context.response_data[field_name]}")
@@ -193,10 +220,21 @@ def receive_value_as_bytes(context, sender_sdk_name: str, field_name: str, expec
         context.logger.info(f"getting on_receive_msg from {sender_sdk_name}")
         on_receive_msg: Dict[str, Any] = context.tm.get_onreceive(sender_sdk_name)
         context.logger.info(f"got on_receive_msg:  {on_receive_msg}")
-        val = access_nested_dict(on_receive_msg["data"], field_name)
+        if sender_sdk_name == "rust":
+            val = on_receive_msg["data"]["data"]
+            rec_field_value = bytes(val.split("value")[1].replace("\"", "").replace(":", "").replace("\\", "").replace("x", "\\x").replace("}", "").strip()[1:], "utf-8")
+        else:
+            val = access_nested_dict(on_receive_msg["data"], field_name)
+            if context.rust_sender:
+                context.rust_sender = False
+                #rec_field_value = base64.b64decode(val.encode('utf-8'))
+                # decoded_string = rec_field_value.decode('utf-8')
+                decoded_string = val.replace("\"", "").replace("\\", "").replace("x", "\\x")[1:]
+                rec_field_value = bytes(decoded_string, "utf-8")
+            else:
+                rec_field_value: bytes = val.encode('utf-8')
         context.logger.info(f"val {field_name}:  {val}")
 
-        rec_field_value = val.encode('utf-8')
         assert rec_field_value.split(b'googleapis.com/')[1] == expected_value.encode('utf-8').split(b'googleapis.com/')[1]
 
     except AssertionError as ae:
@@ -209,8 +247,19 @@ def receive_value_as_bytes(context, sender_sdk_name: str, field_name: str, expec
 @then(u'"{sdk_name}" receives data field "{field_name}" as b"{expected_value}"')
 def receive_rpc_response_as_bytes(context, sdk_name, field_name: str, expected_value: str):
     try:
-        actual_value: str = access_nested_dict(context.response_data, field_name)
-        actual_value: bytes = actual_value.encode('utf-8')
+        if sdk_name == "rust":
+            actual_value = context.response_data["data"]
+            actual_value = bytes(actual_value.split("value")[1].replace("\"", "").replace(":", "").replace("\\", "").replace("x", "\\x").replace("}", "").strip()[1:], "utf-8")
+        else:
+            actual_value: str = access_nested_dict(context.response_data, field_name)
+            if context.rust_sender:
+                context.rust_sender = False
+                actual_value = base64.b64decode(actual_value.encode('utf-8'))
+                decoded_string = actual_value.decode('utf-8')
+                decoded_string = decoded_string.replace("\"", "").replace("\\", "").replace("x", "\\x")[1:]
+                actual_value = bytes(decoded_string, "utf-8")
+            else:
+                actual_value: bytes = actual_value.encode('utf-8')
         
         # Convert bytes to byte string with escape sequences
         actual_value = codecs.encode(actual_value.decode('utf-8'), 'unicode_escape')

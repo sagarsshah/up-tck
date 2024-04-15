@@ -172,17 +172,18 @@ class TestManager:
             self.close_test_agent(test_agent)
             return
         json_data = json.loads(recv_data.decode('utf-8'))
-        logger.info('Received from test agent: %s', json_data)
+        if json_data.get("test_id") is not None:
+            json_data["test_id"] = json_data["test_id"].strip('"')
         # self._process_message(json_data, test_agent)
         self._process_receive_message(json_data,test_agent )
 
     def _process_receive_message(self, response_json: Dict[str, Any], ta_socket: socket.socket):
-        if response_json['action'] == 'initialize':
+        if response_json.get('action') == 'initialize':
             test_agent_sdk: str = response_json['data']["SDK_name"].lower().strip()
             self.test_agent_database.add(ta_socket, test_agent_sdk)
             return
-        
-        action_type: str = response_json["action"]
+        action_type: str = response_json.get("action")
+        logger.info(response_json.get("action"))
         self.action_type_to_response_queue.append(action_type, response_json)
     
     def has_sdk_connection(self, test_agent_name: str) -> bool:

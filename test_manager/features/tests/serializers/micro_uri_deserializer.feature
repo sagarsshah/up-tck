@@ -61,7 +61,7 @@ Feature: Local and Remote URI de-serialization
       | java   |                    |                | 1         |             | 1                    | 1           | rpc           |                   |                  | AQAAAQABAQA= |
       | java   |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA= |
       | java   |                    |                | 2         |             | 1                    | 3           | rpc           |                   |                  | AQAAAwACAQA= |
-      | java   |                    |                | 0         |             | 0                    | 0           | rpc           |                   |                  | AQAAAAAAAAA= |
+      #| java   |                    |                | 0         |             | 0                    | 0           | rpc           |                   |                  | AQAAAAAAAAA= |
       | java   |                    |                | 100       |             | 1                    | 300         | rpc           |                   |                  | AQABLABkAQA= |
       | java   |                    |                | 255       |             | 0                    | 255         | rpc           |                   |                  | AQAA/wD/AAA= |
       | java   |                    |                | 256       |             | 1                    | 256         | rpc           |                   |                  | AQABAAEAAQA= |

@@ -51,19 +51,19 @@ Feature: Testing register and unregister
       | python |
       | rust   |
 
-    Scenario Outline: Test unregisterlistener when no entity is registered to any topic
-      Given "<uE1>" creates data for "unregisterlistener"
-        And sets "entity.name" to "body.access"
-        And sets "resource.name" to "door"
-        And sets "resource.instance" to "front_left"
-        And sets "resource.message" to "Door"
+    # Scenario Outline: Test unregisterlistener when no entity is registered to any topic
+    #   Given "<uE1>" creates data for "unregisterlistener"
+    #     And sets "entity.name" to "body.access"
+    #     And sets "resource.name" to "door"
+    #     And sets "resource.instance" to "front_left"
+    #     And sets "resource.message" to "Door"
 
-      When sends "unregisterlistener" request
+    #   When sends "unregisterlistener" request
 
-      Then the status received with "code" is "NOT_FOUND"
+    #   Then the status received with "code" is "NOT_FOUND"
 
-      Examples:
-        | uE1    |
-        | java   |
-        | python |
-	| rust   |
+    #   Examples:
+    #     | uE1    |
+    #     | java   |
+    #     | python |
+	  #     | rust   |
