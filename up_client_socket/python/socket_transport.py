@@ -32,12 +32,11 @@ from collections import defaultdict
 from concurrent.futures import Future
 from threading import Lock
 
-from uprotocol.proto.uattributes_pb2 import UPriority, UMessageType
+from uprotocol.proto.uattributes_pb2 import UPriority, UMessageType, CallOptions
 from uprotocol.proto.umessage_pb2 import UMessage
 from uprotocol.proto.upayload_pb2 import UPayload
 from uprotocol.proto.uri_pb2 import UEntity, UUri
 from uprotocol.proto.ustatus_pb2 import UStatus, UCode
-from uprotocol.rpc.calloptions import CallOptions
 from uprotocol.rpc.rpcclient import RpcClient
 from uprotocol.transport.builder.uattributesbuilder import UAttributesBuilder
 from uprotocol.transport.ulistener import UListener

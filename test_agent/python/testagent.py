@@ -39,9 +39,9 @@ from uprotocol.proto.uattributes_pb2 import UPriority, UMessageType
 from uprotocol.proto.umessage_pb2 import UMessage
 from uprotocol.proto.upayload_pb2 import UPayload, UPayloadFormat
 from uprotocol.proto.ustatus_pb2 import UStatus
+from uprotocol.proto.uattributes_pb2 import CallOptions
 from uprotocol.proto.uri_pb2 import UUri
 from uprotocol.proto.uuid_pb2 import UUID
-from uprotocol.rpc.calloptions import CallOptions
 from uprotocol.transport.builder.uattributesbuilder import UAttributesBuilder
 from uprotocol.transport.ulistener import UListener
 from uprotocol.uri.serializer.longuriserializer import LongUriSerializer
