@@ -100,7 +100,8 @@ jobs:
             behave --format json --outfile "./reports/${filename}.json" --format html --outfile "./reports/${filename}.html" "$full_path"
             echo "Finished Test: $filename"
             ps aux
-            netstat -tuln
+            echo "NETSTAT"
+            ss -tuln
             sleep 5
         done
     - name: Get Behave Scripts
