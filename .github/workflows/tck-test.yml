@@ -15,13 +15,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Build up-client-socket-rust
-      uses: actions-rs/cargo@v1
-      with:
-        command: init
-        args: --lib utransport-socket up_client_socket/rust
+    - name: Initialize Rust library
+      run: |
+        cd up_client_socket/rust
+        cargo init --lib utransport-socket
+        cd ../../
     - name: Build Rust Test Agent
       uses: actions-rs/cargo@v1
       with:
