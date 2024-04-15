@@ -21,3 +21,4 @@ MANIFEST
 **/jar_files/**
 *.jar
 /target
+**/utransport-socket/*
