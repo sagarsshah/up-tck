@@ -196,14 +196,14 @@ class SocketUTransport(UTransport, RpcClient):
         Invokes a method with the provided URI, request payload, and options.
         """
         attributes = UAttributesBuilder.request(RESPONSE_URI, method_uri, UPriority.UPRIORITY_CS4,
-                                                options.get_timeout()).build()
+                                                options.ttl).build()
         # Get uAttributes's request id
         request_id = attributes.id
 
         response = Future()
         self.reqid_to_future[request_id.SerializeToString()] = response
         # Start a thread to count the timeout
-        timeout_thread = threading.Thread(target=timeout_counter, args=(response, request_id, options.get_timeout()))
+        timeout_thread = threading.Thread(target=timeout_counter, args=(response, request_id, options.ttl))
         timeout_thread.start()
 
         umsg = UMessage(payload=request_payload, attributes=attributes)
