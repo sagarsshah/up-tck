@@ -183,7 +183,6 @@ class TestManager:
             self.test_agent_database.add(ta_socket, test_agent_sdk)
             return
         action_type: str = response_json.get("action")
-        logger.info(response_json.get("action"))
         self.action_type_to_response_queue.append(action_type, response_json)
     
     def has_sdk_connection(self, test_agent_name: str) -> bool:
@@ -219,13 +218,10 @@ class TestManager:
         request_bytes: bytes = convert_str_to_bytes(request_str)
         
         send_socket_data(test_agent_socket, request_bytes)
-        logger.info(f"Sent to TestAgent{request_json}")
         
         # Wait until get response
-        logger.info(f"Waiting test_id {test_id}")
         while not self.action_type_to_response_queue.contains(action, "test_id", test_id):
             pass
-        logger.info(f"Received test_id {test_id}")
 
         # Get response
         response_json: Dict[str, Any] = self.action_type_to_response_queue.popleft(action)

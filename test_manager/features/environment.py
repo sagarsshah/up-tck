@@ -41,7 +41,7 @@ from utils import loggerutils
 
 PYTHON_TA_PATH = "/test_agent/python/testagent.py"
 JAVA_TA_PATH = "/test_agent/java/target/tck-test-agent-java-jar-with-dependencies.jar"
-RUST_TA_PATH = "/target/debug/rust_tck"
+RUST_TA_PATH = "/test_agent/rust/target/debug/rust_tck"
 DISPATCHER_PATH = "/dispatcher/dispatcher.py"
 
 repo = git.Repo('.', search_parent_directories=True)
@@ -92,9 +92,6 @@ def before_all(context):
     loggerutils.setup_logging()
     loggerutils.setup_formatted_logging(context)
 
-    # command = create_command(DISPATCHER_PATH)
-    # process: subprocess.Popen = create_subprocess(command)
-    # context.dispatcher_process = process
     dispatcher = Dispatcher()
     thread = Thread(target=dispatcher.listen_for_client_connections)
     thread.start()
@@ -144,7 +141,6 @@ def after_all(context: Context):
     context.dispatcher.close()
     
     try:
-        # context.dispatcher_process.terminate()
         context.java_ta_process.terminate()
         context.python_ta_process.terminate()
         context.rust_ta_process.terminate()

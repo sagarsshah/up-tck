@@ -65,8 +65,6 @@ class SocketUListener(UListener):
     def on_receive(self, umsg: UMessage) -> None:
         logger.info("Listener received")
         if umsg.attributes.type == UMessageType.UMESSAGE_TYPE_REQUEST:
-            logger.info("REQUEST RECEIVED")
-            # send hardcoded response
             attributes = UAttributesBuilder.response(umsg.attributes.sink, umsg.attributes.source,
                                                      UPriority.UPRIORITY_CS4, umsg.attributes.id).build()
             any_obj = any_pb2.Any()

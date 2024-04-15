@@ -99,16 +99,13 @@ public class TestAgent {
     private static void sendToTestManager(Message proto, String action) {
         // Create a new dictionary
         JSONObject responseDict = new JSONObject();
-        logger.info("sendToTestManager onreceive proto: " + proto);
 
         responseDict.put("data", ProtoConverter.convertMessageToMap(proto));
-        logger.info("sendToTestManager onreceive responsedict: " + responseDict);
         writeDataToTMSocket(responseDict, action);
     }
     
     private static void sendToTestManager(Message proto, String action, String received_test_id) {
         // Create a new dictionary
-        logger.info("ACTION::: " + action);
         JSONObject responseDict = new JSONObject();
         responseDict.put("data", ProtoConverter.convertMessageToMap(proto));
         responseDict.put("test_id", received_test_id);
@@ -178,12 +175,8 @@ public class TestAgent {
                 UPayload.newBuilder());
         CompletionStage<UMessage> responseFuture = transport.invokeMethod(uri, payload,
                 CallOptions.newBuilder().build());
-//        responseFuture.whenComplete(
-//                (responseMessage, exception) -> sendToTestManager(responseMessage, Constant.RESPONSE_RPC));
-        logger.info("responseFuture: " + responseFuture);
         responseFuture.whenComplete((responseMessage, exception) -> {
             sendToTestManager(responseMessage, Constant.INVOKE_METHOD_COMMAND, (String) jsonData.get("test_id"));
-            logger.info("DIDIT!!!");
         });
         return null;
     }
@@ -267,10 +260,8 @@ public class TestAgent {
     }
 
     private static Object handleDeserializeUuidCommand(Map<String, Object> jsonData) {
-    	logger.info("pre handleDeserializeUuidCommand uuid: " + jsonData.get("data").toString());
 
     	UUID uuid = LongUuidSerializer.instance().deserialize(jsonData.get("data").toString());
-    	logger.info("handleDeserializeUuidCommand uuid: " + uuid);
         String testID = (String) jsonData.get("test_id");
         sendToTestManager(uuid, Constant.DESERIALIZE_UUID, testID);
         return null;
@@ -341,10 +332,8 @@ public class TestAgent {
                 if (readSize < 1) {
                     return;
                 }
-                logger.info("Received data from test manager: " + readSize);
 
                 String jsonData = new String(buffer, 0, readSize);
-                logger.info("Received data from test manager: " + jsonData);
 
                 // Parse the JSON string using Gson
                 Map<String, Object> jsonMap = gson.fromJson(jsonData, Map.class);
