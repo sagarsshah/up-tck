@@ -28,7 +28,8 @@ import json
 import logging
 import selectors
 import socket
-from typing import Any, Deque, Dict, List, Union, Tuple
+import sys
+from typing import Any, Deque, Dict, Tuple
 from typing import Any as AnyType
 from threading import Lock
 import uuid
@@ -139,6 +140,8 @@ class TestManager:
         
         # Create server socket
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if sys.platform != "win32":
+            self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((ip_addr, port))
         self.server.listen(100)
         self.server.setblocking(False)

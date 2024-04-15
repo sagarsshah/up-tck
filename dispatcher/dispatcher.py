@@ -27,8 +27,8 @@
 import logging
 import selectors
 import socket
-import errno
-from threading import Thread, Lock
+import sys
+from threading import Lock
 from typing import Set
 
 logging.basicConfig(format='%(levelname)s| %(filename)s:%(lineno)s %(message)s')
@@ -54,19 +54,12 @@ class Dispatcher:
         self.server = None
 
         # Create server socket
-        try:
-            self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if sys.platform != "win32":
             self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.server.bind(DISPATCHER_ADDR)
-            self.server.listen(100)
-            self.server.setblocking(False)
-        except OSError as e:
-            if e.errno == errno.EADDRINUSE:
-                print("Error: Address already in use.")
-                print("Error message:", e.strerror)
-            else:
-                # Handle other OSError cases
-                print("Error:", e)
+        self.server.bind(DISPATCHER_ADDR)
+        self.server.listen(100)
+        self.server.setblocking(False)
 
         logger.info("Dispatcher server is running/listening")
 
@@ -82,15 +75,8 @@ class Dispatcher:
 
         :param server: The server socket.
         """
-        try:
-            logger.info("TYPE: " + str(type(server)))
-            up_client_socket, _ = server.accept()
-        except OSError as e:
-            if e.errno == errno.EINVAL:
-                print("Error: Invalid argument.")
-                print("Error message:", e.strerror)
-            else:
-                print("Error:", e)
+
+        up_client_socket, _ = server.accept()
         logger.info(f'accepted conn. {up_client_socket.getpeername()}')
 
         with self.lock:
