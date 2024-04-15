@@ -21,7 +21,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: init
-        args: --lib utransport-socket -C up_client_socket/rust
+        args: --lib utransport-socket up_client_socket/rust
     - name: Build Rust Test Agent
       uses: actions-rs/cargo@v1
       with:
