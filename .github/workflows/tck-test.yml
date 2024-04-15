@@ -17,6 +17,8 @@ jobs:
     steps:
     - name: Initialize Rust library
       run: |
+        ls -a
+        pwd
         cd up_client_socket/rust
         cargo init --lib utransport-socket
         cd ../../
