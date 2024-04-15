@@ -40,12 +40,7 @@ use std::io::{Read, Write};
 use crate::constants::BYTES_MSG_LENGTH;
 use crate::constants::DISPATCHER_ADDR;
 
-pub trait UtransportExt {
-     fn socket_init(&mut self);
-     fn _handle_publish_message(&mut self, umsg: UMessage);
-     fn _handle_request_message(&mut self, umsg: UMessage);
-    fn read_socket(&self, buffer: &mut [u8]) -> io::Result<usize>;
-}
+
 
 pub struct UtransportSocket {
     socket_sync: TcpStreamSync,
@@ -73,15 +68,13 @@ impl UtransportSocket {
             listner_map: Arc::new(Mutex::new(HashMap::new())),
         }
     }
-}
 
-impl UtransportExt for UtransportSocket {
-     fn socket_init(&mut self) {
+    pub fn socket_init(&mut self) {
         loop {
             // Receive data from the socket
             let mut buffer: [u8; BYTES_MSG_LENGTH] = [0; BYTES_MSG_LENGTH];
 
-            let bytes_read = match self.read_socket(&mut buffer) {
+            let bytes_read = match self._read_socket(&mut buffer) {
                 Ok(bytes_read) => bytes_read,
                 Err(e) => {
                     dbg!("Socket error: {}", e);
@@ -116,7 +109,9 @@ impl UtransportExt for UtransportSocket {
         }
     }
 
-    fn read_socket(&self, buffer: &mut [u8]) -> io::Result<usize> {
+   
+
+    fn _read_socket(&self, buffer: &mut [u8]) -> io::Result<usize> {
         let mut socket = &self.socket_sync;
 
         socket.read(buffer)
@@ -160,6 +155,11 @@ impl UtransportExt for UtransportSocket {
     }
 }
 }
+
+///impl UtransportExt for UtransportSocket {
+     
+
+//}
 #[async_trait]
 impl UTransport for UtransportSocket {
     /// Sends a message using this transport's message exchange mechanism.
@@ -392,4 +392,6 @@ impl UTransport for UtransportSocket {
 
         Err(UStatus::ok())
     }
+
+ 
 }
