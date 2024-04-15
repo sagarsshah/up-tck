@@ -56,6 +56,7 @@ class Dispatcher:
         # Create server socket
         try:
             self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.server.bind(DISPATCHER_ADDR)
             self.server.listen(100)
             self.server.setblocking(False)
@@ -82,6 +83,7 @@ class Dispatcher:
         :param server: The server socket.
         """
         try:
+            logger.info("TYPE: " + str(type(server)))
             up_client_socket, _ = server.accept()
         except OSError as e:
             if e.errno == errno.EINVAL:
