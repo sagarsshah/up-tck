@@ -51,6 +51,7 @@ class Dispatcher:
         self.selector = selectors.DefaultSelector()
         self.connected_sockets: Set[socket.socket] = set()
         self.lock = Lock()
+        self.server = None
 
         # Create server socket
         try:
