@@ -22,7 +22,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-use async_std::io;
+//use async_std::io;
 use async_trait::async_trait;
 use tokio::runtime::Runtime;
 use up_rust::UListener;
@@ -74,7 +74,7 @@ impl UtransportSocket {
             // Receive data from the socket
             let mut buffer: [u8; BYTES_MSG_LENGTH] = [0; BYTES_MSG_LENGTH];
 
-            let bytes_read = match self._read_socket(&mut buffer) {
+            let bytes_read =  match self.socket_sync.read(&mut buffer){
                 Ok(bytes_read) => bytes_read,
                 Err(e) => {
                     dbg!("Socket error: {}", e);
@@ -110,13 +110,6 @@ impl UtransportSocket {
     }
 
    
-
-    fn _read_socket(&self, buffer: &mut [u8]) -> io::Result<usize> {
-        let mut socket = &self.socket_sync;
-
-        socket.read(buffer)
-    }
-
      fn _handle_publish_message(&mut self, umsg: UMessage) {
         dbg!("HANDLING PUB MESG");
         // Create a new Tokio runtime
