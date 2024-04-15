@@ -30,10 +30,13 @@ use up_rust::{UMessage, UStatus, UTransport};
 use std::io::{Read, Write};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
+use tokio::sync::Mutex;
 
 use serde::Serialize;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::task;
 
 use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
 use crate::*;
@@ -45,15 +48,29 @@ pub struct JsonResponseData {
     ue: String,
 }
 
+#[derive(Clone)]
+pub struct SocketTestListener {
+    sender_to_test_agent: Sender<JsonResponseData>
+}
+
+impl SocketTestListener {
+    pub fn new(sender_to_test_agent: Sender<JsonResponseData>) -> Self {
+        Self {
+            sender_to_test_agent
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct SocketTestAgent {
     utransport: UtransportSocket,
+    listener: Arc<Mutex<Arc<SocketTestListener>>>,
     clientsocket: Arc<Mutex<TcpStreamSync>>,
     clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
-    listner_map: Vec<String>,
 }
 
 #[async_trait]
-impl UListener for SocketTestAgent {    
+impl UListener for SocketTestListener {
     
     async fn on_receive(&self, msg: UMessage) {
         dbg!("OnReceive called");
@@ -70,26 +87,36 @@ impl UListener for SocketTestAgent {
             }
         };
 
-        let mut _value:HashMap<String,String> =  HashMap::new();
-        _value.insert("value".into(),__payload.into());
-        let _value_str = serde_json::to_string(&_value).expect("issue in converting to payload");
-       
-        let mut _payload:HashMap<String,String> =  HashMap::new();
-        _payload.insert("payload".into(),_value_str);
-        let _payload_str = serde_json::to_string(&_payload).expect("issue in converting to payload");
+        let Ok(value_to_payload_str) = serde_json::to_string(&HashMap::from([
+            ("value".to_string(), __payload.to_string())
+        ])) else {
+            // error!("unable to stringify hashmap");
+            return;
+        };
 
-        let mut json_message: JsonResponseData = JsonResponseData {
+        let Ok(payload_to_value_str) = serde_json::to_string(&HashMap::from([
+            ("payload".to_string(), value_to_payload_str)
+        ])) else {
+            // error!("unable to stringify hashmap");
+            return;
+        };
+
+        let data = HashMap::from([
+            ("data".to_string(), payload_to_value_str)
+        ]);
+
+        let json_message = JsonResponseData {
             action: constants::RESPONSE_ON_RECEIVE.to_owned(),
-            data: HashMap::new(),
+            data,
             ue: "rust".to_string(),
         };
-        
 
-        json_message.data.insert("data".into(),_payload_str);
-       
-        <SocketTestAgent as Clone>::clone(&self)
-            .send_to_tm(json_message)
-            .await;
+        match self.sender_to_test_agent.send(json_message).await {
+            Ok(_) => { /* log something here if you like */ }
+            Err(e) => {
+                // error!("Unable to send data to test agent!");
+            }
+        }
     }
 
     async fn on_error(&self, _err: UStatus) {
@@ -97,59 +124,50 @@ impl UListener for SocketTestAgent {
     }
 }
 
-impl Clone for SocketTestAgent {
-    fn clone(&self) -> Self {
-        SocketTestAgent {
-            utransport: self.utransport.clone(),
-            clientsocket: self.clientsocket.clone(),
-            clientsocket_to_tm:self.clientsocket_to_tm.clone(),
-            listner_map: self.listner_map.clone(),
-        }
-    }
-
-    fn clone_from(&mut self, source: &Self) {
-        *self = source.clone()
-    }
-}
-
 impl SocketTestAgent {
-    pub fn new(test_clientsocket: TcpStreamSync, test_clientsocket_to_tm : TcpStreamSync, utransport: UtransportSocket) -> Self {
-        let socket = Arc::new(Mutex::new(test_clientsocket));
-        let socket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
-        let clientsocket = socket;
-        let clientsocket_to_tm = socket_to_tm;
-        SocketTestAgent {
+    pub fn new(test_clientsocket: TcpStreamSync, test_clientsocket_to_tm : TcpStreamSync, utransport: UtransportSocket) -> Arc<Mutex<Self>> {
+        let clientsocket = Arc::new(Mutex::new(test_clientsocket));
+        let clientsocket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
+        let (tx, rx) = channel(100);
+        let listener = Arc::new(Mutex::new(Arc::new(SocketTestListener::new(tx))));
+
+        let myself = Arc::new(Mutex::new(Self {
             utransport,
+            listener,
             clientsocket,
             clientsocket_to_tm,
-            listner_map: Vec::new(),
-        }
+        }));
+
+        let myself_for_listening = myself.clone();
+        task::spawn_blocking(move || {
+            Self::listen_for_sends_to_tm(rx, myself_for_listening)
+        });
+
+        myself
     }
 
-
-    fn sanitize_input_string(self, input: &str) -> String {
+    fn sanitize_input_string(input: &str) -> String {
         input.chars()
             .map(|c| {
                 match c {
-                    '\x00'..='\x1F' => self.clone().escape_control_character(c),
+                    '\x00'..='\x1F' => Self::escape_control_character(c),
                     _ => c.to_string(),
                 }
             })
             .collect()
     }
      
-    fn escape_control_character(self,c: char) -> String {
+    fn escape_control_character(c: char) -> String {
         let escaped = format!("\\u{:04x}", c as u32);
         escaped
     }
-    pub async fn receive_from_tm(&mut self) {
-        // Clone Arc to capture it in the closure
+    pub async fn receive_from_tm(&self) {
 
-        let arc_self = Arc::new(self.clone());
-        self.clone().inform_tm_ta_starting();
-        let mut socket = self.clientsocket.lock().expect("error accessing TM server");
+        let mut socket = self.clientsocket.lock().await;
+        let listener_clone_for_loop = self.listener.clone();
 
         loop {
+            let listener_top_of_loop = listener_clone_for_loop.clone();
             let mut recv_data = [0; 2048];
 
             let bytes_received = match socket.read(&mut recv_data) {
@@ -168,7 +186,7 @@ impl SocketTestAgent {
             let recv_data_str: std::borrow::Cow<'_, str> =
             String::from_utf8_lossy(&recv_data[..bytes_received]);
             let mut action_str = "";
-            let cleaned_json_string = self.clone().sanitize_input_string(&recv_data_str).replace("BYTES:", "");
+            let cleaned_json_string = Self::sanitize_input_string(&recv_data_str).replace("BYTES:", "");
             let json_msg: Value = serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
@@ -185,7 +203,7 @@ impl SocketTestAgent {
                 }
 
                 REGISTER_LISTENER_COMMAND => {
-                    let cloned_listener = Arc::clone(&arc_self);
+                    let cloned_listener = listener_top_of_loop.lock().await.clone();
 
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                     let u_uuri = wu_uuri.0;
@@ -193,20 +211,20 @@ impl SocketTestAgent {
                     self.utransport
                         .register_listener(
                             u_uuri,
-                            Arc::clone(&cloned_listener) as Arc<dyn UListener>,
+                            cloned_listener,
                         )
                         .await
                 }
 
                 UNREGISTER_LISTENER_COMMAND => {
-                    let cloned_listener = Arc::clone(&arc_self);
+                    let cloned_listener = listener_top_of_loop.lock().await.clone();
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                     let u_uuri = wu_uuri.0;
                     action_str = constants::UNREGISTER_LISTENER_COMMAND;
                     self.utransport
                         .unregister_listener(
                             u_uuri,
-                            Arc::clone(&cloned_listener) as Arc<dyn UListener>, /*&cloned_listener*/
+                            cloned_listener
                         )
                         .await
                 }
@@ -263,7 +281,7 @@ impl SocketTestAgent {
         self.close_connection();
     }
 
-     fn inform_tm_ta_starting(self) {
+     async fn inform_tm_ta_starting(self) {
         let sdk_init = r#"{"ue":"rust","data":{"SDK_name":"rust"},"action":"initialize"}"#;
 
         //inform TM that rust TA is running
@@ -273,11 +291,21 @@ impl SocketTestAgent {
         let socket_clone = self.clientsocket.clone();
         let _ = socket_clone
             .lock()
-            .expect("error in sending data to TM")
+            .await
             .write_all(message);
     }
 
-    async fn send_to_tm(self, json_message: JsonResponseData) {
+    async fn listen_for_sends_to_tm(mut receiver_from_listener: Receiver<JsonResponseData>, myself: Arc<Mutex<SocketTestAgent>>) {
+        let self_clone = myself.clone();
+        task::spawn(async move {
+            while let Some(json_response_data) = receiver_from_listener.recv().await {
+                let myself = self_clone.clone();
+                myself.lock().await.send_to_tm(json_response_data).await;
+            }
+        });
+    }
+
+    async fn send_to_tm(&self, json_message: JsonResponseData) {
 
         let json_message_str = convert_json_to_jsonstring(&json_message);
         let message = json_message_str.as_bytes();
@@ -288,6 +316,7 @@ impl SocketTestAgent {
             .expect("error in sending data to TM")
             .write_all(message);
     }
+
     pub fn close_connection(&self) {
            todo!();
     }
