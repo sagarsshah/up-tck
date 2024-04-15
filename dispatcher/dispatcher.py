@@ -27,6 +27,7 @@
 import logging
 import selectors
 import socket
+import errno
 from threading import Thread, Lock
 from typing import Set
 
@@ -52,10 +53,18 @@ class Dispatcher:
         self.lock = Lock()
 
         # Create server socket
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.bind(DISPATCHER_ADDR)
-        self.server.listen(100)
-        self.server.setblocking(False)
+        try:
+            self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server.bind(DISPATCHER_ADDR)
+            self.server.listen(100)
+            self.server.setblocking(False)
+        except OSError as e:
+            if e.errno == errno.EADDRINUSE:
+                print("Error: Address already in use.")
+                print("Error message:", e.strerror)
+            else:
+                # Handle other OSError cases
+                print("Error:", e)
 
         logger.info("Dispatcher server is running/listening")
 

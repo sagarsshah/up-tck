@@ -141,7 +141,7 @@ def after_all(context: Context):
     context.tm.close_test_agent("rust")
     context.tm.close()
     context.dispatcher.close()
-    
+    context.logger.info("Closed All Test Agents and Test Manager...")
     try:
         context.java_ta_process.terminate()
         context.python_ta_process.terminate()
