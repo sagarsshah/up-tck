@@ -99,6 +99,7 @@ jobs:
             echo "Running Test: $filename"
             behave --format json --outfile "./reports/${filename}.json" --format html --outfile "./reports/${filename}.html" "$full_path"
             echo "Finished Test: $filename"
+            ps aux
             sleep 5
         done
     - name: Get Behave Scripts

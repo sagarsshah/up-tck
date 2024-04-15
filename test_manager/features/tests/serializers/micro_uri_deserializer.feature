@@ -49,7 +49,7 @@ Feature: Local and Remote URI de-serialization
       |                    |                | 1         |             | 1                    | 1           | rpc           |                   |                  | AQAAAQABAQA=                       |
       |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA=                       |
       |                    |                | 2         |             | 1                    | 3           | rpc           |                   |                  | AQAAAwACAQA=                       |
-      |                    |                | 0         |             | 0                    | 0           | rpc           |                   |                  | AQAAAAAAAAA=                       |
+      |                    |                | 0         |             | 0                    | 0           | rpc           | response          |                  | AQAAAAAAAAA=                       |
       |                    |                | 100       |             | 1                    | 300         | rpc           |                   |                  | AQABLABkAQA=                       |
       |                    |                | 255       |             | 0                    | 255         | rpc           |                   |                  | AQAA/wD/AAA=                       |
       |                    |                | 256       |             | 1                    | 256         | rpc           |                   |                  | AQABAAEAAQA=                       |
@@ -80,7 +80,7 @@ Feature: Local and Remote URI de-serialization
       |                    |                | 1         |             | 1                    | 1           | rpc           |                   |                  | AQAAAQABAQA=                       |
       |                    |                | 1         |             | 0                    | 1           | rpc           |                   |                  | AQAAAQABAAA=                       |
       |                    |                | 2         |             | 1                    | 3           | rpc           |                   |                  | AQAAAwACAQA=                       |
-      # |                    |                | 0         |             | 0                    | 0           | rpc           |                   |                  | AQAAAAAAAAA=                       |
+      |                    |                | 0         |             | 0                    | 0           | rpc           | response          |                  | AQAAAAAAAAA=                       |
       |                    |                | 100       |             | 1                    | 300         | rpc           |                   |                  | AQABLABkAQA=                       |
       |                    |                | 255       |             | 0                    | 255         | rpc           |                   |                  | AQAA/wD/AAA=                       |
       |                    |                | 256       |             | 1                    | 256         | rpc           |                   |                  | AQABAAEAAQA=                       |
