@@ -140,7 +140,7 @@ class Dispatcher:
     
     def close(self):
         self.dispatcher_exit = True
-        for utransport_socket in self.connected_sockets.copy():
+        for utransport_socket in self.connected_sockets:
             self._close_connected_socket(utransport_socket)
         # Close server socket
         try:
@@ -153,9 +153,3 @@ class Dispatcher:
         # Close selector
         self.selector.close()
         logger.info("Dispatcher closed!")
-
-
-# if __name__ == '__main__':
-#     dispatcher = Dispatcher()
-#     thread = Thread(target=dispatcher.listen_for_client_connections)
-#     thread.start()
