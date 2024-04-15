@@ -42,13 +42,13 @@ use crate::constants::DISPATCHER_ADDR;
 
 
 
-pub struct UtransportSocket {
+pub struct UTransportSocket {
     socket_sync: TcpStreamSync,
     listner_map: Arc<Mutex<HashMap<String, Vec<Arc<dyn UListener>>>>>,
 }
-impl Clone for UtransportSocket {
+impl Clone for UTransportSocket {
     fn clone(&self) -> Self {
-        UtransportSocket {
+        UTransportSocket {
             socket_sync: self
                 .socket_sync
                 .try_clone()
@@ -58,12 +58,12 @@ impl Clone for UtransportSocket {
     }
 }
 
-impl UtransportSocket {
+impl UTransportSocket {
     pub fn new() -> Self {
         let socket_sync: TcpStreamSync =
             TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
 
-        UtransportSocket {
+        UTransportSocket {
             socket_sync,
             listner_map: Arc::new(Mutex::new(HashMap::new())),
         }
@@ -149,12 +149,12 @@ impl UtransportSocket {
 }
 }
 
-///impl UtransportExt for UtransportSocket {
+///impl UtransportExt for UTransportSocket {
      
 
 //}
 #[async_trait]
-impl UTransport for UtransportSocket {
+impl UTransport for UTransportSocket {
     /// Sends a message using this transport's message exchange mechanism.
     ///
     /// # Arguments

@@ -47,7 +47,7 @@ pub struct JsonResponseData {
 }
 
 pub struct SocketTestAgent {
-    utransport: UtransportSocket,
+    utransport: UTransportSocket,
     clientsocket: Arc<Mutex<TcpStreamSync>>,
     clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
     listner_map: Vec<String>,
@@ -115,7 +115,7 @@ impl Clone for SocketTestAgent {
 }
 
 impl SocketTestAgent {
-    pub fn new(test_clientsocket: TcpStreamSync, test_clientsocket_to_tm : TcpStreamSync, utransport: UtransportSocket) -> Self {
+    pub fn new(test_clientsocket: TcpStreamSync, test_clientsocket_to_tm : TcpStreamSync, utransport: UTransportSocket) -> Self {
         let socket = Arc::new(Mutex::new(test_clientsocket));
         let socket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
         let clientsocket = socket;

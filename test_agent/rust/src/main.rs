@@ -33,7 +33,7 @@ use std::thread;
 
 use crate::constants::*;
 use testagent::SocketTestAgent;
-use u_transport_socket::UtransportSocket;
+use u_transport_socket::UTransportSocket;
 mod testagent;
 use tokio::runtime::Runtime;
 use std::net::TcpStream as TcpStreamSync;
@@ -52,7 +52,7 @@ fn main() {
       rt.block_on(async {
           // Spawn a Tokio task to connect to TEST_MANAGER_ADDR asynchronously
          
-          let mut transport_socket = UtransportSocket::new();
+          let mut transport_socket = UTransportSocket::new();
           let transport_socket_clone = transport_socket.clone();
 
           // Spawn a blocking task within the runtime
