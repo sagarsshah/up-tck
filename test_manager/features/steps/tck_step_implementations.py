@@ -288,7 +288,7 @@ def receive_micro_serialized_uuri(context, expected_bytes_as_base64_str: str):
 
     try:
         actual_bytes_as_str: str = context.response_data
-        actual_bytes: bytes = actual_bytes_as_str.encode("ansi")
+        actual_bytes: bytes = actual_bytes_as_str.encode("iso-8859-1")
         
         context.logger.info(f"actual: {actual_bytes} | expect: {expected_bytes}")
         assert_that(expected_bytes, equal_to(actual_bytes))
@@ -306,7 +306,7 @@ def send_micro_serialized_command(context, command: str, micro_serialized_uri_as
     micro_serialized_uri: bytes = base64_str_to_bytes(micro_serialized_uri_as_base64_str)
     context.logger.info(f"Json request for {command} -> {micro_serialized_uri}")
     
-    micro_serialized_uri_as_str = micro_serialized_uri.decode("ansi")
+    micro_serialized_uri_as_str = micro_serialized_uri.decode("iso-8859-1")
     response_json: Dict[str, Any] = context.tm.request(context.ue, command, micro_serialized_uri_as_str)
     
     context.logger.info(f"Response Json {command} -> {response_json}")
