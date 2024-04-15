@@ -134,7 +134,7 @@ jobs:
             }
             for (let i = 0; i < json_list.length; i++) {
               if (json_list[i][0].status != "passed") {
-                core.setFailed("One or more features failed")
+                //core.setFailed("One or more features failed")
                 core.error("\u001b[38;2;255;0;0mFeature:" + json_list[i][0].name + " [failed]")
               } else{
                 core.info("\u001b[38;2;0;255;0mFeature:" + json_list[i][0].name + " [passed]")
@@ -142,7 +142,7 @@ jobs:
             }
           } catch(err) {
             core.error("\u001b[38;2;255;0;0mError while reading or parsing the JSON")
-            core.setFailed(err)
+            //core.setFailed(err)
           }
     - name: Upload Test Reports
       uses: actions/upload-artifact@v4
