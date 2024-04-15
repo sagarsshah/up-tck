@@ -206,12 +206,12 @@ def send_longserialize_uuid(json_msg: Dict[str, Any]):
 def send_microserialize_uri(json_msg: Dict[str, Any]):
     uri: UUri = dict_to_proto(json_msg["data"], UUri())
     serialized_uuri: bytes = MicroUriSerializer().serialize(uri)
-    serialized_uuri_json_packed: str = serialized_uuri.decode("ansi")  # use "ansi" so no UnicodeDecodeError if use "utf-8"
+    serialized_uuri_json_packed: str = serialized_uuri.decode("ascii")  # use "ansi" so no UnicodeDecodeError if use "utf-8"
     send_to_test_manager(serialized_uuri_json_packed, CONSTANTS.MICRO_SERIALIZE_URI, received_test_id=json_msg["test_id"])
 
 def send_microdeserialize_uri(json_msg: Dict[str, Any]):
     sent_micro_serialized_uuri: str = json_msg["data"]
-    micro_serialized_uuri: bytes = sent_micro_serialized_uuri.encode("ansi")
+    micro_serialized_uuri: bytes = sent_micro_serialized_uuri.encode("ascii")
     uuri: UUri = MicroUriSerializer().deserialize(micro_serialized_uuri)
     send_to_test_manager(uuri, CONSTANTS.MICRO_DESERIALIZE_URI, received_test_id=json_msg["test_id"])
 

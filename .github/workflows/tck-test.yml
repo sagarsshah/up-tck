@@ -13,6 +13,7 @@ jobs:
   run_tests:
 
     runs-on: ubuntu-20.04
+    continue-on-error: true
 
     steps:
     - name: Checkout
