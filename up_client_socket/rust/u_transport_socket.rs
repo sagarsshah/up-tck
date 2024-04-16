@@ -43,29 +43,30 @@ use crate::constants::DISPATCHER_ADDR;
 
 
 pub struct UTransportSocket {
-    socket_sync: TcpStreamSync,
-    listner_map: Arc<Mutex<HashMap<String, Vec<Arc<dyn UListener>>>>>,
+    socket_sync: Arc<Mutex<TcpStreamSync>>,
+    listener_map: Arc<Mutex<HashMap<UUri, Vec<Arc<dyn UListener>>>>>,
 }
 impl Clone for UTransportSocket {
     fn clone(&self) -> Self {
         UTransportSocket {
             socket_sync: self
                 .socket_sync
-                .try_clone()
-                .expect("issue in cloning sync socket"),
-            listner_map: self.listner_map.clone(),
+                .clone(),
+                //.expect("issue in cloning sync socket"),
+            listener_map: self.listener_map.clone(),
         }
     }
 }
 
 impl UTransportSocket {
     pub fn new() -> Self {
-        let socket_sync: TcpStreamSync =
-            TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
-
+        let _socket_sync: TcpStreamSync =
+                     TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
+        let socket_sync    = Arc::new(Mutex::new(_socket_sync));                  
+          
         UTransportSocket {
             socket_sync,
-            listner_map: Arc::new(Mutex::new(HashMap::new())),
+            listener_map: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -74,7 +75,7 @@ impl UTransportSocket {
             // Receive data from the socket
             let mut buffer: [u8; BYTES_MSG_LENGTH] = [0; BYTES_MSG_LENGTH];
 
-            let bytes_read =  match self.socket_sync.read(&mut buffer){
+            let bytes_read =  match self.socket_sync.lock().expect("issues in aquiring lock").read(&mut buffer){
                 Ok(bytes_read) => bytes_read,
                 Err(e) => {
                     dbg!("Socket error: {}", e);
@@ -118,10 +119,10 @@ impl UTransportSocket {
         dbg!(&umsg.attributes.source.to_string());
     
         if let Some(listner_array) = self
-            .listner_map
+            .listener_map
             .lock()
             .unwrap()
-            .get(&umsg.attributes.source.to_string())
+            .get(&umsg.attributes.source)
         {
             for listner_ref in listner_array {
                 rt.block_on(async {
@@ -135,10 +136,10 @@ impl UTransportSocket {
 
         let rt_ = Runtime::new().unwrap();
         if let Some(listner_array) = self
-            .listner_map
+            .listener_map
             .lock()
             .unwrap()
-            .get(&umsg.attributes.sink.to_string())
+            .get(&umsg.attributes.sink)
         {
             for listner_ref in listner_array {
                 rt_.block_on(async {
@@ -175,8 +176,8 @@ impl UTransport for UTransportSocket {
     async fn send(&self, message: UMessage) -> Result<(), UStatus> {
         let mut socket_clone = self
             .socket_sync
-            .try_clone()
-            .expect("dispatcher socket connection cloning failed");
+            .lock()
+            .expect("issue in sending data");
 
         let umsg_serialized = message.clone().write_to_bytes().expect("Send Serialization Issue");
         let _ = UMessage::parse_from_bytes(&umsg_serialized.clone()).expect("Failed to parse message");
@@ -319,28 +320,28 @@ impl UTransport for UTransportSocket {
                 .map_err(|_| UStatus::fail_with_code(UCode::INVALID_ARGUMENT, "Invalid topic"))?;
 
             if UriValidator::is_rpc_response(&topic) {
-                self.listner_map
+                self.listener_map
                     .lock()
                     .unwrap()
-                    .entry(topic.to_string())
+                    .entry(topic)
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![Arc::clone(&listener)as Arc<dyn UListener>]);
 
                 Ok(())
             } else if UriValidator::is_rpc_method(&topic) {
-                self.listner_map
+                self.listener_map
                     .lock()
                     .unwrap()
-                    .entry(topic.to_string())
+                    .entry(topic)
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
                 dbg!("register listner called for rpc !");
                 Ok(())
             } else {
-                self.listner_map
+                self.listener_map
                     .lock()
                     .unwrap()
-                    .entry(topic.to_string())
+                    .entry(topic)
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
                 dbg!("register listner called for topic !");
@@ -366,10 +367,10 @@ impl UTransport for UTransportSocket {
         topic: UUri,
         listener: Arc<dyn UListener>,
     ) -> Result<(), UStatus> {
-        let mut map = self.listner_map.lock().expect("Failed to acquire lock");
+        let mut map = self.listener_map.lock().expect("Failed to acquire lock");
         let listner_clone = Arc::clone(&listener) as Arc<dyn UListener>;
 
-        if let Some(listeners) = map.get_mut(&topic.to_string()) {
+        if let Some(listeners) = map.get_mut(&topic) {
             if let Some(index) = listeners
                 .iter()
                 .position(|l| Arc::ptr_eq(l, &listner_clone))
@@ -378,7 +379,7 @@ impl UTransport for UTransportSocket {
 
                 // If the vector becomes empty after removal, delete the entry from the map
                 if listeners.is_empty() {
-                    map.remove(&topic.to_string());
+                    map.remove(&topic);
                 }
             }
         }

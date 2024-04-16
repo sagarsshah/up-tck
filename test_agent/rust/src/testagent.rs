@@ -50,7 +50,7 @@ pub struct SocketTestAgent {
     utransport: UTransportSocket,
     clientsocket: Arc<Mutex<TcpStreamSync>>,
     clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
-    listner_map: Vec<String>,
+    listener_map: Vec<String>,
 }
 
 #[async_trait]
@@ -105,7 +105,7 @@ impl Clone for SocketTestAgent {
             utransport: self.utransport.clone(),
             clientsocket: self.clientsocket.clone(),
             clientsocket_to_tm:self.clientsocket_to_tm.clone(),
-            listner_map: self.listner_map.clone(),
+            listener_map: self.listener_map.clone(),
         }
     }
 
@@ -124,7 +124,7 @@ impl SocketTestAgent {
             utransport,
             clientsocket,
             clientsocket_to_tm,
-            listner_map: Vec::new(),
+            listener_map: Vec::new(),
         }
     }
 
