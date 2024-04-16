@@ -211,7 +211,7 @@ impl UTransport for UTransportSocket {
                     })?;
 
                 match socket_clone.write_all(&umsg_serialized) {
-                    Ok(_) => Err(UStatus::ok()),
+                    Ok(_) => Ok(()),
                     Err(_) => Err(UStatus::fail_with_code(
                         UCode::UNAVAILABLE,
                         "Dispatcher communication issue",
@@ -230,7 +230,7 @@ impl UTransport for UTransportSocket {
                     })?;
 
                 match socket_clone.write_all(&umsg_serialized) {
-                    Ok(_) => Err(UStatus::ok()),
+                    Ok(_) => Ok(()),
                     Err(_) => Err(UStatus::fail_with_code(
                         UCode::UNAVAILABLE,
                         "Dispatcher communication issue",
@@ -248,7 +248,7 @@ impl UTransport for UTransportSocket {
                         )
                     })?;
                 match socket_clone.write_all(&umsg_serialized) {
-                    Ok(_) => Err(UStatus::ok()),
+                    Ok(_) => Ok(()),
                     Err(_) => Err(UStatus::fail_with_code(
                         UCode::UNAVAILABLE,
                         "Dispatcher communication issue",
@@ -347,7 +347,7 @@ impl UTransport for UTransportSocket {
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
                     .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
                 dbg!("register listner called for topic !");
-                Err(UStatus::ok())
+                Ok(())
             }
         }
     }
@@ -386,7 +386,7 @@ impl UTransport for UTransportSocket {
             }
         }
 
-        Err(UStatus::ok())
+        Ok(())
     }
 
  
