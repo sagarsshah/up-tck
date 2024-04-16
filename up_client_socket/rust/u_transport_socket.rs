@@ -327,7 +327,7 @@ impl UTransport for UTransportSocket {
                     .unwrap()
                     .entry(topic)
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    .or_insert_with(|| vec![Arc::clone(&listener)as Arc<dyn UListener>]);
+                    .or_insert(vec![listener.clone()]);
 
                 Ok(())
             } else if UriValidator::is_rpc_method(&topic) {
@@ -336,7 +336,7 @@ impl UTransport for UTransportSocket {
                     .unwrap()
                     .entry(topic)
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
+                    .or_insert(vec![listener.clone()]);
                 dbg!("register listner called for rpc !");
                 Ok(())
             } else {
@@ -345,7 +345,7 @@ impl UTransport for UTransportSocket {
                     .unwrap()
                     .entry(topic)
                     .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    .or_insert_with(|| vec![Arc::clone(&listener) as Arc<dyn UListener>]);
+                    .or_insert(vec![listener.clone()]);
                 dbg!("register listner called for topic !");
                 Ok(())
             }
