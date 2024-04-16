@@ -126,7 +126,7 @@ impl UTransportSocket {
         {
             for listner_ref in listner_array {
                 rt.block_on(async {
-                    let _ = listner_ref.on_receive(umsg.clone()).await;
+                    listner_ref.on_receive(umsg.clone()).await;
                 });
             }
         }
@@ -143,7 +143,7 @@ impl UTransportSocket {
         {
             for listner_ref in listner_array {
                 rt_.block_on(async {
-                let _ = listner_ref.on_receive(umsg.clone()).await;
+                listner_ref.on_receive(umsg.clone()).await;
             });
         }
     }
