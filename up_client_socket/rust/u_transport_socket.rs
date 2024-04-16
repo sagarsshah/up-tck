@@ -43,7 +43,8 @@ use crate::constants::DISPATCHER_ADDR;
 
 
 pub struct UTransportSocket {
-    socket_sync: Arc<Mutex<TcpStreamSync>>,
+    //socket_sync: Arc<Mutex<TcpStreamSync>>,
+    socket_sync: TcpStreamSync,
     listener_map: Arc<Mutex<HashMap<UUri, Vec<Arc<dyn UListener>>>>>,
 }
 impl Clone for UTransportSocket {
@@ -51,8 +52,8 @@ impl Clone for UTransportSocket {
         UTransportSocket {
             socket_sync: self
                 .socket_sync
-                .clone(),
-                //.expect("issue in cloning sync socket"),
+                .try_clone()
+                .expect("issue in cloning sync socket"),
             listener_map: self.listener_map.clone(),
         }
     }
@@ -62,8 +63,8 @@ impl UTransportSocket {
     pub fn new() -> Self {
         let _socket_sync: TcpStreamSync =
                      TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
-        let socket_sync    = Arc::new(Mutex::new(_socket_sync));                  
-          
+        //let socket_sync    = Arc::new(Mutex::new(_socket_sync));                  
+        let socket_sync    = _socket_sync;                    
         UTransportSocket {
             socket_sync,
             listener_map: Arc::new(Mutex::new(HashMap::new())),
@@ -75,7 +76,8 @@ impl UTransportSocket {
             // Receive data from the socket
             let mut buffer: [u8; BYTES_MSG_LENGTH] = [0; BYTES_MSG_LENGTH];
 
-            let bytes_read =  match self.socket_sync.lock().expect("issues in aquiring lock").read(&mut buffer){
+            let bytes_read =  match self.socket_sync.read(&mut buffer){
+                //let bytes_read =  match self.socket_sync.lock().expect("issues in aquiring lock").read(&mut buffer){
                 Ok(bytes_read) => bytes_read,
                 Err(e) => {
                     dbg!("Socket error: {}", e);
@@ -176,7 +178,8 @@ impl UTransport for UTransportSocket {
     async fn send(&self, message: UMessage) -> Result<(), UStatus> {
         let mut socket_clone = self
             .socket_sync
-            .lock()
+            //.lock()
+            .try_clone()
             .expect("issue in sending data");
 
         let umsg_serialized = message.clone().write_to_bytes().expect("Send Serialization Issue");
