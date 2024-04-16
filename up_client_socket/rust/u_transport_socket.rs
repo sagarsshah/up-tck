@@ -384,9 +384,17 @@ impl UTransport for UTransportSocket {
                     map.remove(&topic);
                 }
             }
+            Ok(())
+
+        }else{
+            Err(UStatus::fail_with_code(
+                UCode::NOT_FOUND,
+                "Not found",
+            ))
         }
 
-        Ok(())
+
+        
     }
 
  
