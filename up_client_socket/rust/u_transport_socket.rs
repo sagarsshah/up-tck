@@ -180,7 +180,9 @@ impl UTransport for UTransportSocket {
             .expect("issue in sending data");
 
         let umsg_serialized = message.clone().write_to_bytes().expect("Send Serialization Issue");
-        let _ = UMessage::parse_from_bytes(&umsg_serialized.clone()).expect("Failed to parse message");
+        let _result = UMessage::parse_from_bytes(&umsg_serialized.clone());
+  //todo: handle result
+
         let _payload = *message
             .payload
             .0
@@ -196,7 +198,7 @@ impl UTransport for UTransportSocket {
             .map_err(|_| UStatus::fail_with_code(UCode::INTERNAL, "Unable to parse type"))?
         {
             UMessageType::UMESSAGE_TYPE_PUBLISH => {
-                // PublishValidator::validate(, &attributes) /* .map(|e|{ UStatus::fail_with_code(UCode::INVALID_ARGUMENT,format!("wrong Publish Uattribute{e:?}"),})?;*/
+                
                 println!("UMESSAGE_TYPE_PUBLISH sending data");
                 UAttributesValidators::Publish
                     .validator()
