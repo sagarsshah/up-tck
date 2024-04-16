@@ -90,8 +90,8 @@ impl UTransportSocket {
 
             let umessage = UMessage::parse_from_bytes(&buffer[..bytes_read]).expect("Failed to parse message");
 
-            match umessage.attributes.type_.enum_value() {
-                Ok(mt) => match mt {
+            match umessage.attributes.type_.enum_value_or(UMessageType::UMESSAGE_TYPE_UNSPECIFIED) {
+                //Ok(mt) => match mt {
                     UMessageType::UMESSAGE_TYPE_PUBLISH => {
                         println!("calling handle publish...");
                         self._handle_publish_message(umessage);
@@ -104,8 +104,8 @@ impl UTransportSocket {
                         self._handle_request_message(umessage);
                         ()
                     }
-                },
-                Err(_) => (),
+               // },
+               // Err(_) => (),
             }
         }
     }
