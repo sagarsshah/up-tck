@@ -33,7 +33,7 @@ pub const DISPATCHER_ADDR: (&str, u16) = ("127.0.0.1", 44444);
 pub const TEST_MANAGER_ADDR: (&str, u16) = ("127.0.0.5", 12345);
 
 // Define constant for maximum message length
-pub const BYTES_MSG_LENGTH: usize = 32767;
+pub const BYTES_MSG_LENGTH: usize = 32_767;
 
 #[test]
 pub fn test_constants() {
