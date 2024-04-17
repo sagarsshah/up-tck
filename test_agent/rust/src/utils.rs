@@ -22,9 +22,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
-use serde_json::Value;
 use serde::{Deserialize, Deserializer};
+use serde_json::Value;
 use up_rust::{
     Data, UAttributes, UAuthority, UCode, UEntity, UMessage, UMessageType, UPayload,
     UPayloadFormat, UPriority, UResource, UUri, UUID,
@@ -44,24 +43,18 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-        //dbg!("WrapperUUri: {:?}", value.);
 
         //update authority
-        //let _authority_name = match value
         let _authority_name = value
             .get("authority")
             .and_then(|authority| authority.get("name"))
             .and_then(|name| name.as_str())
-	            .map(String::from);
-       // {
-         //   Some(_authority_name) => _authority_name.as_str(),
-           // None => Some("default"),
-        //};
+            .map(String::from);
 
         let _authority_number_ip = match value
             .get("authority")
             .and_then(|authority| authority.get("number"))
-            .and_then(|number| number.get("Ip"))
+            .and_then(|number| number.get("ip"))
         {
             Some(_authority_number_ip) => _authority_number_ip.to_string().as_bytes().to_vec(),
             None => {
@@ -72,7 +65,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         let _authority_number_id = match value
             .get("authority")
             .and_then(|authority| authority.get("number"))
-            .and_then(|number| number.get("Id"))
+            .and_then(|number| number.get("id"))
         {
             Some(_authority_number_id) => _authority_number_id.to_string().as_bytes().to_vec(),
             None => {
@@ -82,17 +75,14 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         };
 
         let mut _authority = UAuthority::new();
-        if!( _authority_name.clone() == Some("default".to_owned())){
+        if !(_authority_name.clone() == Some("default".to_owned())) {
             _authority.name = _authority_name.clone();
         }
 
-
-
-        
-        if!(_authority_number_id.clone() == vec![0]){
+        if !(_authority_number_id.clone() == vec![0]) {
             _authority.set_id(_authority_number_id.clone());
         }
-        if!(_authority_number_ip.clone() == vec![0]){
+        if !(_authority_number_ip.clone() == vec![0]) {
             _authority.set_ip(_authority_number_ip.clone());
         }
 
@@ -138,20 +128,16 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         let _entity_special_fields = SpecialFields::default();
         let mut _entity = UEntity::new();
         _entity.name = _entity_name.unwrap_or_default().to_string();
-        if!(_entity_id == 0)
-        {
-        _entity.id = Some(_entity_id)
+        if !(_entity_id == 0) {
+            _entity.id = Some(_entity_id)
         };
-        if!(_entity_version_major == 0)
-        {
-        _entity.version_major = Some(_entity_version_major)
+        if !(_entity_version_major == 0) {
+            _entity.version_major = Some(_entity_version_major)
         };
-        if!(_entity_version_minor == 0)
-        {
-        _entity.version_minor = Some(_entity_version_minor)
+        if !(_entity_version_minor == 0) {
+            _entity.version_minor = Some(_entity_version_minor)
         };
         _entity.special_fields = _entity_special_fields;
-      //  dbg!("_entity: {:?}", _entity);
         let ___entity = MessageField(Some(Box::new(_entity)));
 
         let _resource_name = match value
@@ -192,21 +178,21 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         _resource.name = _resource_name.to_owned();
         _resource.instance = _resource_instance;
         _resource.message = _resource_message;
-        if!(_resource_id == 0)
-        {
-        _resource.id = Some(_resource_id)
-    };
-
+        if !(_resource_id == 0) {
+            _resource.id = Some(_resource_id)
+        };
         let ___resource = MessageField(Some(Box::new(_resource)));
         let _special_fields = SpecialFields::default();
-    let mut _uuri:UUri = UUri::new();
-    if!(_authority_name.clone() == Some("default".to_owned()) && _authority_number_id.clone() == vec![0] && _authority_number_ip.clone() == vec![0]){
-        dbg!("authority is not default");
-        _uuri.authority = MessageField(Some(Box::new(_authority)));
-    }
-    _uuri.entity = ___entity;
-    _uuri.resource = ___resource;
-
+        let mut _uuri: UUri = UUri::new();
+        if !(_authority_name.clone() == None
+            && _authority_number_id.clone() == vec![0]
+            && _authority_number_ip.clone() == vec![0])
+        {
+            dbg!("authority is not default");
+            _uuri.authority = MessageField(Some(Box::new(_authority)));
+        }
+        _uuri.entity = ___entity;
+        _uuri.resource = ___resource;
 
         Ok(WrapperUUri(_uuri))
     }
@@ -219,8 +205,6 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-        
-   
 
         let _priority = match value.get("priority") {
             Some(_priority) => UPriority::from_str(
@@ -244,17 +228,15 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
 
         let _source = match value.get("source") {
             Some(_source) => {
-                serde_json::from_value::<WrapperUUri>(_source.clone()).unwrap_or_default() 
+                serde_json::from_value::<WrapperUUri>(_source.clone()).unwrap_or_default()
             }
             None => WrapperUUri::default(),
         };
-
 
         let _sink = match value.get("sink") {
             Some(_sink) => serde_json::from_value::<WrapperUUri>(_sink.clone()).unwrap_or_default(),
             None => WrapperUUri::default(),
         };
-
 
         let _id_msb = match value.get("id").and_then(|resource| resource.get("msb")) {
             Some(_id_msb) => _id_msb
@@ -279,7 +261,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             lsb: _id_lsb,
             special_fields: SpecialFields::default(),
         };
-      
+
         let __id = MessageField(Some(Box::new(___id)));
 
         let _ttl = match value.get("ttl") {
@@ -304,9 +286,9 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
 
         let _commstatus = match value.get("commstatus") {
             Some(_commstatus) => UCode::from_str(
-                    _commstatus
-                     .as_str()
-                     .expect("Deserialize:something wrong with commstatus field"),
+                _commstatus
+                    .as_str()
+                    .expect("Deserialize:something wrong with commstatus field"),
             ),
             None => Some(UCode::OUT_OF_RANGE),
         };
@@ -334,7 +316,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             lsb: _reqid_lsb,
             special_fields: SpecialFields::default(),
         };
-      
+
         let __reqid = MessageField(Some(Box::new(___reqid)));
 
         let _token = match value.get("token") {
@@ -352,29 +334,28 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         };
         // special field //todo
         let _special_fields = SpecialFields::default();
-        let mut _uattributes =  UAttributes::new();
-       if _special_fields.ne(&SpecialFields::default()){
-        _uattributes.special_fields = _special_fields;
-       }
+        let mut _uattributes = UAttributes::new();
+        if _special_fields.ne(&SpecialFields::default()) {
+            _uattributes.special_fields = _special_fields;
+        }
         _uattributes.id = __id;
         _uattributes.type_ = _type.unwrap().into();
 
-        
         if !(_source.0.clone() == UUri::default()) {
-        _uattributes.source = MessageField(Some(Box::new(_source.0)));
+            _uattributes.source = MessageField(Some(Box::new(_source.0)));
         }
-        if!(_sink.0.clone() == UUri::default()){
+        if !(_sink.0.clone() == UUri::default()) {
             _uattributes.sink = MessageField(Some(Box::new(_sink.0)));
-            }
-            _uattributes.priority = _priority.unwrap().into();
-            _uattributes.ttl = _ttl.into();
-            _uattributes.permission_level = Some(_permission_level.into());
-            _uattributes.commstatus =Some(_commstatus.unwrap().into());
-            _uattributes.reqid = __reqid;
-            _uattributes.token= Some(_token.to_owned());
-            _uattributes.traceparent = Some(_traceparent.to_owned());
-        
-        Ok(WrapperUAttribute( _uattributes))
+        }
+        _uattributes.priority = _priority.unwrap().into();
+        _uattributes.ttl = _ttl.into();
+        _uattributes.permission_level = Some(_permission_level.into());
+        _uattributes.commstatus = Some(_commstatus.unwrap().into());
+        _uattributes.reqid = __reqid;
+        _uattributes.token = Some(_token.to_owned());
+        _uattributes.traceparent = Some(_traceparent.to_owned());
+
+        Ok(WrapperUAttribute(_uattributes))
     }
 }
 #[derive(Default)]
@@ -403,9 +384,10 @@ impl<'de> Deserialize<'de> for WrapperUPayload {
             None => 0,
         };
 
-         
         let _data = match value.get("value") {
-            Some(_data) => Data::Value( serde_json::to_vec(_data).expect("error in converting data value to vector")),
+            Some(_data) => Data::Value(
+                serde_json::to_vec(_data).expect("error in converting data value to vector"),
+            ),
             None => Data::Reference(0),
         };
 
@@ -443,7 +425,6 @@ impl<'de> Deserialize<'de> for WrapperUMessage {
             None => WrapperUPayload(UPayload::default()),
         };
 
-       
         Ok(WrapperUMessage(UMessage {
             attributes: Some(wattributes.0).into(),
             payload: Some(wpayload.0).into(),
@@ -458,17 +439,14 @@ pub fn escape_control_character(c: char) -> String {
 }
 
 pub fn sanitize_input_string(input: &str) -> String {
-    input.chars()
-        .map(|c| {
-            match c {
-                '\x00'..='\x1F' => escape_control_character(c),
-                _ => c.to_string(),
-            }
+    input
+        .chars()
+        .map(|c| match c {
+            '\x00'..='\x1F' => escape_control_character(c),
+            _ => c.to_string(),
         })
         .collect()
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -481,9 +459,7 @@ mod tests {
         let result = convert_json_to_jsonstring(&json);
         assert_eq!(result, r#"{"key":"value"}"#);
     }
-
 }
-
 
 // use prost::Message; // Import the prost crate for protobuf message handling
 use std::fmt::Debug;

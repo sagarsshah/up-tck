@@ -30,17 +30,15 @@ use up_rust::{UAttributesValidators, UriValidator};
 use up_rust::{UCode, UMessage, UMessageType, UStatus, UTransport, UUri};
 
 use protobuf::Message;
+use std::io::{Read, Write};
 use std::net::TcpStream as TcpStreamSync;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-use std::io::{Read, Write};
 
 use crate::constants::BYTES_MSG_LENGTH;
 use crate::constants::DISPATCHER_ADDR;
-
-
 
 pub struct UTransportSocket {
     //socket_sync: Arc<Mutex<TcpStreamSync>>,
@@ -62,9 +60,9 @@ impl Clone for UTransportSocket {
 impl UTransportSocket {
     pub fn new() -> Self {
         let _socket_sync: TcpStreamSync =
-                     TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
-        //let socket_sync    = Arc::new(Mutex::new(_socket_sync));                  
-        let socket_sync    = _socket_sync;                    
+            TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
+        //let socket_sync    = Arc::new(Mutex::new(_socket_sync));
+        let socket_sync = _socket_sync;
         UTransportSocket {
             socket_sync,
             listener_map: Arc::new(Mutex::new(HashMap::new())),
@@ -76,7 +74,7 @@ impl UTransportSocket {
             // Receive data from the socket
             let mut buffer: [u8; BYTES_MSG_LENGTH] = [0; BYTES_MSG_LENGTH];
 
-            let bytes_read =  match self.socket_sync.read(&mut buffer){
+            let bytes_read = match self.socket_sync.read(&mut buffer) {
                 //let bytes_read =  match self.socket_sync.lock().expect("issues in aquiring lock").read(&mut buffer){
                 Ok(bytes_read) => bytes_read,
                 Err(e) => {
@@ -90,36 +88,39 @@ impl UTransportSocket {
                 continue;
             }
 
-            let umessage = UMessage::parse_from_bytes(&buffer[..bytes_read]).expect("Failed to parse message");
+            let umessage =
+                UMessage::parse_from_bytes(&buffer[..bytes_read]).expect("Failed to parse message");
 
-            match umessage.attributes.type_.enum_value_or(UMessageType::UMESSAGE_TYPE_UNSPECIFIED) {
+            match umessage
+                .attributes
+                .type_
+                .enum_value_or(UMessageType::UMESSAGE_TYPE_UNSPECIFIED)
+            {
                 //Ok(mt) => match mt {
-                    UMessageType::UMESSAGE_TYPE_PUBLISH => {
-                        println!("calling handle publish...");
-                        self._handle_publish_message(umessage);
-                        ()
-                    }
-                    UMessageType::UMESSAGE_TYPE_NOTIFICATION => todo!(),
-                    UMessageType::UMESSAGE_TYPE_UNSPECIFIED => (),
-                    UMessageType::UMESSAGE_TYPE_RESPONSE => (),
-                    UMessageType::UMESSAGE_TYPE_REQUEST => {
-                        self._handle_request_message(umessage);
-                        ()
-                    }
-               // },
-               // Err(_) => (),
+                UMessageType::UMESSAGE_TYPE_PUBLISH => {
+                    println!("calling handle publish...");
+                    self._handle_publish_message(umessage);
+                    ()
+                }
+                UMessageType::UMESSAGE_TYPE_NOTIFICATION => todo!(),
+                UMessageType::UMESSAGE_TYPE_UNSPECIFIED => (),
+                UMessageType::UMESSAGE_TYPE_RESPONSE => (),
+                UMessageType::UMESSAGE_TYPE_REQUEST => {
+                    self._handle_request_message(umessage);
+                    ()
+                } // },
+                  // Err(_) => (),
             }
         }
     }
 
-   
-     fn _handle_publish_message(&mut self, umsg: UMessage) {
+    fn _handle_publish_message(&mut self, umsg: UMessage) {
         dbg!("HANDLING PUB MESG");
         // Create a new Tokio runtime
         let rt = Runtime::new().unwrap();
-   
+
         dbg!(&umsg.attributes.source.to_string());
-    
+
         if let Some(listner_array) = self
             .listener_map
             .lock()
@@ -134,26 +135,19 @@ impl UTransportSocket {
         }
     }
 
-     fn _handle_request_message(&mut self, umsg: UMessage) {
-
+    fn _handle_request_message(&mut self, umsg: UMessage) {
         let rt_ = Runtime::new().unwrap();
-        if let Some(listner_array) = self
-            .listener_map
-            .lock()
-            .unwrap()
-            .get(&umsg.attributes.sink)
-        {
+        if let Some(listner_array) = self.listener_map.lock().unwrap().get(&umsg.attributes.sink) {
             for listner_ref in listner_array {
                 rt_.block_on(async {
-                listner_ref.on_receive(umsg.clone()).await;
-            });
+                    listner_ref.on_receive(umsg.clone()).await;
+                });
+            }
         }
     }
 }
-}
 
 ///impl UtransportExt for UTransportSocket {
-     
 
 //}
 #[async_trait]
@@ -182,9 +176,12 @@ impl UTransport for UTransportSocket {
             .try_clone()
             .expect("issue in sending data");
 
-        let umsg_serialized = message.clone().write_to_bytes().expect("Send Serialization Issue");
+        let umsg_serialized = message
+            .clone()
+            .write_to_bytes()
+            .expect("Send Serialization Issue");
         let _result = UMessage::parse_from_bytes(&umsg_serialized.clone());
-  //todo: handle result
+        //todo: handle result
 
         let _payload = *message
             .payload
@@ -201,7 +198,6 @@ impl UTransport for UTransportSocket {
             .map_err(|_| UStatus::fail_with_code(UCode::INTERNAL, "Unable to parse type"))?
         {
             UMessageType::UMESSAGE_TYPE_PUBLISH => {
-                
                 println!("UMESSAGE_TYPE_PUBLISH sending data");
                 UAttributesValidators::Publish
                     .validator()
@@ -321,8 +317,10 @@ impl UTransport for UTransportSocket {
             ))
         } else {
             // Do the validation
+            dbg!(topic.authority.is_some());
+            dbg!(UriValidator::is_remote(&topic));
             UriValidator::validate(&topic)
-                .map_err(|_| UStatus::fail_with_code(UCode::INVALID_ARGUMENT, "Invalid topic"))?;
+                .map_err(|err| UStatus::fail_with_code(UCode::INVALID_ARGUMENT, err.to_string()))?;
 
             if UriValidator::is_rpc_response(&topic) {
                 self.listener_map
@@ -388,17 +386,8 @@ impl UTransport for UTransportSocket {
                 }
             }
             Ok(())
-
-        }else{
-            Err(UStatus::fail_with_code(
-                UCode::NOT_FOUND,
-                "Not found",
-            ))
+        } else {
+            Err(UStatus::fail_with_code(UCode::NOT_FOUND, "Not found"))
         }
-
-
-        
     }
-
- 
 }

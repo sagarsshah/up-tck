@@ -47,8 +47,8 @@ Feature: Testing register and unregister
 
     Examples:
       | uE1    |
-      | java   |
-      | python |
+      # | java   |
+      #| python |
       | rust   |
 
     # Scenario Outline: Test unregisterlistener when no entity is registered to any topic

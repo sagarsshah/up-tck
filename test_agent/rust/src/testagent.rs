@@ -46,27 +46,32 @@ pub struct JsonResponseData {
     data: HashMap<String, String>,
     action: String,
     ue: String,
-    test_id: String
+    test_id: String,
 }
 #[derive(Clone)]
 pub struct SocketTestAgent {
     utransport: UTransportSocket,
     clientsocket: Arc<Mutex<TcpStreamSync>>,
     clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
-  //  listener_map: Vec<String>,
+    //  listener_map: Vec<String>,
 }
 
 #[async_trait]
-impl UListener for SocketTestAgent {    
-    
+impl UListener for SocketTestAgent {
     async fn on_receive(&self, msg: UMessage) {
         dbg!("OnReceive called");
 
         let __payload = match &msg.payload.data {
             Some(data) => {
                 // Now we have access to the Data enum
-                match data {Data::Reference(reference)=>{reference.to_string()}Data::Value(value)=> {let value_str=String::from_utf8_lossy(value);value_str.to_string()},
-    _ => "none".into(), }
+                match data {
+                    Data::Reference(reference) => reference.to_string(),
+                    Data::Value(value) => {
+                        let value_str = String::from_utf8_lossy(value);
+                        value_str.to_string()
+                    }
+                    _ => "none".into(),
+                }
             }
             None => {
                 println!("No data available");
@@ -74,17 +79,17 @@ impl UListener for SocketTestAgent {
             }
         };
 
-        let mut _value:HashMap<String,String> =  HashMap::new();
-        _value.insert("value".into(),__payload.into());
+        let mut _value: HashMap<String, String> = HashMap::new();
+        _value.insert("value".into(), __payload.into());
         let Ok(_value_str) = serde_json::to_string(&_value) else {
-            error!("issue in converting to payload"); 
+            error!("issue in converting to payload");
             return;
         };
-       
-        let mut _payload:HashMap<String,String> =  HashMap::new();
-        _payload.insert("payload".into(),_value_str);
+
+        let mut _payload: HashMap<String, String> = HashMap::new();
+        _payload.insert("payload".into(), _value_str);
         let Ok(_payload_str) = serde_json::to_string(&_payload) else {
-            error!("issue in converting to payload"); 
+            error!("issue in converting to payload");
             return;
         };
 
@@ -94,15 +99,13 @@ impl UListener for SocketTestAgent {
             ue: "rust".to_string(),
             test_id: "1".to_string(),
         };
-        
 
-        json_message.data.insert("data".into(),_payload_str);
-       
+        json_message.data.insert("data".into(), _payload_str);
+
         //<SocketTestAgent as Clone>::clone(&self)
-        //todo: revisit this and check:Better pattern might be to have the UListener be impled on a different struct 
+        //todo: revisit this and check:Better pattern might be to have the UListener be impled on a different struct
         //e.g. SocketTestListener that then holds an Arc<Mutex<SocketTestAgent>> to be able to call send_to_tm() on that instead.
-            self.clone().send_to_tm(json_message)
-            .await;
+        self.clone().send_to_tm(json_message).await;
     }
 
     async fn on_error(&self, _err: UStatus) {
@@ -126,17 +129,19 @@ impl UListener for SocketTestAgent {
 // }
 
 impl SocketTestAgent {
-    pub fn new(test_clientsocket: TcpStreamSync, test_clientsocket_to_tm : TcpStreamSync, utransport: UTransportSocket) -> Self {
+    pub fn new(
+        test_clientsocket: TcpStreamSync,
+        test_clientsocket_to_tm: TcpStreamSync,
+        utransport: UTransportSocket,
+    ) -> Self {
         let clientsocket = Arc::new(Mutex::new(test_clientsocket));
         let clientsocket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
-         Self {
+        Self {
             utransport,
             clientsocket,
             clientsocket_to_tm,
-       }
+        }
     }
-
-   
 
     pub async fn receive_from_tm(&mut self) {
         // Clone Arc to capture it in the closure
@@ -162,21 +167,24 @@ impl SocketTestAgent {
             }
 
             let recv_data_str: std::borrow::Cow<'_, str> =
-            String::from_utf8_lossy(&recv_data[..bytes_received]);
+                String::from_utf8_lossy(&recv_data[..bytes_received]);
             let mut action_str = "";
             let cleaned_json_string = sanitize_input_string(&recv_data_str).replace("BYTES:", "");
-            let json_msg: Value = serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
+            let json_msg: Value =
+                serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
             let test_id = json_msg["test_id"].clone();
-            
-            let json_str_ref = action.as_str().expect("issue in converting value to string");
+
+            let json_str_ref = action
+                .as_str()
+                .expect("issue in converting value to string");
 
             let status = match json_str_ref {
                 SEND_COMMAND => {
                     let wu_message: WrapperUMessage =
                         serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
-                    let  u_message = wu_message.0;
+                    let u_message = wu_message.0;
                     action_str = constants::SEND_COMMAND;
                     self.utransport.send(u_message).await
                 }
@@ -208,21 +216,28 @@ impl SocketTestAgent {
                         .await
                 }
 
-                _ => Ok(())
+                _ => Ok(()),
             };
 
             // Create an empty HashMap to store the fields of the message
-            let mut status_dict:HashMap<String, _> = HashMap::new();
+            let mut status_dict: HashMap<String, _> = HashMap::new();
 
             match status {
                 Ok(()) => {
                     let status = UStatus::default();
-                    status_dict.insert("message".to_string(), status.message.clone().unwrap_or_default());
+                    status_dict.insert(
+                        "message".to_string(),
+                        status.message.clone().unwrap_or_default(),
+                    );
+                    status_dict.insert("code".to_string(), 0.to_string());
                 }
                 Err(u_status) => {
                     // Handle the case when status is an error
                     // Convert the error message to a string and insert it into the HashMap
-                    status_dict.insert("message".to_string(), u_status.message.clone().unwrap_or_default());
+                    status_dict.insert(
+                        "message".to_string(),
+                        u_status.message.clone().unwrap_or_default(),
+                    );
                     let enum_number = match u_status.get_code() {
                         UCode::OK => 0,
                         UCode::INTERNAL => 13,
@@ -240,7 +255,7 @@ impl SocketTestAgent {
                         UCode::UNAUTHENTICATED => 16,
                         UCode::UNAVAILABLE => 14,
                         UCode::UNIMPLEMENTED => 12,
-                        UCode::UNKNOWN => 2
+                        UCode::UNKNOWN => 2,
                     };
                     status_dict.insert("code".to_string(), enum_number.to_string());
                 }
@@ -253,7 +268,6 @@ impl SocketTestAgent {
                 test_id: test_id.to_string(),
             };
 
-
             <SocketTestAgent as Clone>::clone(&self)
                 .send_to_tm(_json_message)
                 .await;
@@ -261,7 +275,7 @@ impl SocketTestAgent {
         self.close_connection();
     }
 
-     fn inform_tm_ta_starting(self) {
+    fn inform_tm_ta_starting(self) {
         let sdk_init = r#"{"ue":"rust","data":{"SDK_name":"rust"},"action":"initialize"}"#;
 
         //inform TM that rust TA is running
@@ -277,10 +291,9 @@ impl SocketTestAgent {
     }
 
     async fn send_to_tm(self, json_message: JsonResponseData) {
-
         let json_message_str = convert_json_to_jsonstring(&json_message);
         let message = json_message_str.as_bytes();
-        
+
         let socket_clone = self.clientsocket_to_tm.clone();
         let result = socket_clone
             .try_lock()
@@ -289,6 +302,6 @@ impl SocketTestAgent {
         //todo:handle result
     }
     pub fn close_connection(&self) {
-           todo!();
+        todo!();
     }
 }
