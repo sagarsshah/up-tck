@@ -47,13 +47,16 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         //dbg!("WrapperUUri: {:?}", value.);
 
         //update authority
-        let _authority_name = match value
+        //let _authority_name = match value
+        let _authority_name = value
             .get("authority")
             .and_then(|authority| authority.get("name"))
-        {
-            Some(_authority_name) => _authority_name.as_str(),
-            None => Some("default"),
-        };
+            .and_then(|name| name.as_str())
+	            .map(String::from);
+       // {
+         //   Some(_authority_name) => _authority_name.as_str(),
+           // None => Some("default"),
+        //};
 
         let _authority_number_ip = match value
             .get("authority")
@@ -79,9 +82,13 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         };
 
         let mut _authority = UAuthority::new();
-        if!( _authority_name.clone() == Some("default")){
-            _authority.name = _authority_name.map(|s| s.to_string());
+        if!( _authority_name.clone() == Some("default".to_owned())){
+            _authority.name = _authority_name.clone();
         }
+
+
+
+        
         if!(_authority_number_id.clone() == vec![0]){
             _authority.set_id(_authority_number_id.clone());
         }
@@ -193,7 +200,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         let ___resource = MessageField(Some(Box::new(_resource)));
         let _special_fields = SpecialFields::default();
     let mut _uuri:UUri = UUri::new();
-    if!(_authority_name.clone() == Some("default") && _authority_number_id.clone() == vec![0] && _authority_number_ip.clone() == vec![0]){
+    if!(_authority_name.clone() == Some("default".to_owned()) && _authority_number_id.clone() == vec![0] && _authority_number_ip.clone() == vec![0]){
         dbg!("authority is not default");
         _uuri.authority = MessageField(Some(Box::new(_authority)));
     }
@@ -396,7 +403,6 @@ impl<'de> Deserialize<'de> for WrapperUPayload {
             None => 0,
         };
 
-        
          
         let _data = match value.get("value") {
             Some(_data) => Data::Value( serde_json::to_vec(_data).expect("error in converting data value to vector")),
