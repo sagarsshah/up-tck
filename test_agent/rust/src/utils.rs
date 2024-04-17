@@ -403,13 +403,11 @@ impl<'de> Deserialize<'de> for WrapperUPayload {
             None => Data::Reference(0),
         };
 
-        let _special_fields = SpecialFields::default();
-
         Ok(WrapperUPayload(UPayload {
             length: Some(_length),
             format: _format.unwrap().into(),
             data: _data.into(),
-            special_fields: _special_fields,
+            special_fields: Default::default(),
         }))
     }
 }
@@ -439,17 +437,11 @@ impl<'de> Deserialize<'de> for WrapperUMessage {
             None => WrapperUPayload(UPayload::default()),
         };
 
-        let mattribute = MessageField::from_option(Some(wattributes.0));
-       // dbg!("mattribute: {:?} \n", mattribute);
-        let mpayload = MessageField::from_option(Some(wpayload.0));
-       // dbg!("mpayload: {:?} \n", mpayload);
-        // special field //todo
-        let _special_fields = SpecialFields::default();
-
+       
         Ok(WrapperUMessage(UMessage {
-            attributes: mattribute,
-            payload: mpayload,
-            special_fields: _special_fields,
+            attributes: Some(wattributes.0).into(),
+            payload: Some(wpayload.0).into(),
+            special_fields: Default::default(),
         }))
     }
 }
