@@ -39,6 +39,8 @@ use serde::Serialize;
 use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
 use crate::*;
 
+use self::utils::sanitize_input_string;
+
 #[derive(Serialize)]
 pub struct JsonResponseData {
     data: HashMap<String, String>,
@@ -96,8 +98,10 @@ impl UListener for SocketTestAgent {
 
         json_message.data.insert("data".into(),_payload_str);
        
-        <SocketTestAgent as Clone>::clone(&self)
-            .send_to_tm(json_message)
+        //<SocketTestAgent as Clone>::clone(&self)
+        //todo: revisit this and check:Better pattern might be to have the UListener be impled on a different struct 
+        //e.g. SocketTestListener that then holds an Arc<Mutex<SocketTestAgent>> to be able to call send_to_tm() on that instead.
+            self.clone().send_to_tm(json_message)
             .await;
     }
 
@@ -123,34 +127,17 @@ impl UListener for SocketTestAgent {
 
 impl SocketTestAgent {
     pub fn new(test_clientsocket: TcpStreamSync, test_clientsocket_to_tm : TcpStreamSync, utransport: UTransportSocket) -> Self {
-        let socket = Arc::new(Mutex::new(test_clientsocket));
-        let socket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
-        let clientsocket = socket;
-        let clientsocket_to_tm = socket_to_tm;
-        SocketTestAgent {
+        let clientsocket = Arc::new(Mutex::new(test_clientsocket));
+        let clientsocket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
+         Self {
             utransport,
             clientsocket,
             clientsocket_to_tm,
-         //   listener_map: Vec::new(),
-        }
+       }
     }
 
+   
 
-    fn sanitize_input_string(self, input: &str) -> String {
-        input.chars()
-            .map(|c| {
-                match c {
-                    '\x00'..='\x1F' => self.clone().escape_control_character(c),
-                    _ => c.to_string(),
-                }
-            })
-            .collect()
-    }
-     
-    fn escape_control_character(self,c: char) -> String {
-        let escaped = format!("\\u{:04x}", c as u32);
-        escaped
-    }
     pub async fn receive_from_tm(&mut self) {
         // Clone Arc to capture it in the closure
 
@@ -177,7 +164,7 @@ impl SocketTestAgent {
             let recv_data_str: std::borrow::Cow<'_, str> =
             String::from_utf8_lossy(&recv_data[..bytes_received]);
             let mut action_str = "";
-            let cleaned_json_string = self.clone().sanitize_input_string(&recv_data_str).replace("BYTES:", "");
+            let cleaned_json_string = sanitize_input_string(&recv_data_str).replace("BYTES:", "");
             let json_msg: Value = serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();

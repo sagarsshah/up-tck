@@ -452,6 +452,21 @@ impl<'de> Deserialize<'de> for WrapperUMessage {
     }
 }
 
+pub fn escape_control_character(c: char) -> String {
+    let escaped = format!("\\u{:04x}", c as u32);
+    escaped
+}
+
+pub fn sanitize_input_string(input: &str) -> String {
+    input.chars()
+        .map(|c| {
+            match c {
+                '\x00'..='\x1F' => escape_control_character(c),
+                _ => c.to_string(),
+            }
+        })
+        .collect()
+}
 
 
 
