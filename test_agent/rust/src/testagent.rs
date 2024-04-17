@@ -269,10 +269,11 @@ impl SocketTestAgent {
         let message = sdk_init.as_bytes();
 
         let socket_clone = self.clientsocket.clone();
-        let _ = socket_clone
+        let result = socket_clone
             .lock()
             .expect("error in sending data to TM")
             .write_all(message);
+        //todo: handle result
     }
 
     async fn send_to_tm(self, json_message: JsonResponseData) {
@@ -281,10 +282,11 @@ impl SocketTestAgent {
         let message = json_message_str.as_bytes();
         
         let socket_clone = self.clientsocket_to_tm.clone();
-        let _result = socket_clone
+        let result = socket_clone
             .try_lock()
             .expect("error in sending data to TM")
             .write_all(message);
+        //todo:handle result
     }
     pub fn close_connection(&self) {
            todo!();
