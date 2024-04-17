@@ -213,47 +213,25 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
         
-        fn from_str_priority(s: &str) -> UPriority {
-            match s {
-                "UPRIORITY_UNSPECIFIED" => UPriority::UPRIORITY_UNSPECIFIED,
-                "UPRIORITY_CS0" => UPriority::UPRIORITY_CS0,
-                "UPRIORITY_CS1" => UPriority::UPRIORITY_CS1,
-                "UPRIORITY_CS2" => UPriority::UPRIORITY_CS2,
-                "UPRIORITY_CS3" => UPriority::UPRIORITY_CS3,
-                "UPRIORITY_CS4" => UPriority::UPRIORITY_CS4,
-                "UPRIORITY_CS5" => UPriority::UPRIORITY_CS5,
-                "UPRIORITY_CS6" => UPriority::UPRIORITY_CS6,
-                _ => UPriority::UPRIORITY_UNSPECIFIED,
-            }
-        }
-
-        fn from_str_type(s: &str) -> UMessageType {
-            match s {
-                "UMESSAGE_TYPE_PUBLISH" => UMessageType::UMESSAGE_TYPE_PUBLISH,
-                "UMESSAGE_TYPE_REQUEST" => UMessageType::UMESSAGE_TYPE_REQUEST,
-                "UMESSAGE_TYPE_RESPONSE" => UMessageType::UMESSAGE_TYPE_RESPONSE,
-                "UMESSAGE_TYPE_UNSPECIFIED" => UMessageType::UMESSAGE_TYPE_UNSPECIFIED,
-                _ => UMessageType::UMESSAGE_TYPE_UNSPECIFIED,
-            }
-        }
+   
 
         let _priority = match value.get("priority") {
-            Some(_priority) => from_str_priority(
+            Some(_priority) => UPriority::from_str(
                 _priority
                     .as_str()
                     .expect("Deserialize:something wrong with priority field"),
             ),
-            None => UPriority::UPRIORITY_UNSPECIFIED,
+            None => Some(UPriority::UPRIORITY_UNSPECIFIED),
         };
         dbg!("_priority: {:?}", _priority);
 
         let _type = match value.get("type") {
-            Some(_type) => from_str_type(
+            Some(_type) => UMessageType::from_str(
                 _type
                     .as_str()
                     .expect("Deserialize:something wrong with _type field"),
             ),
-            None => UMessageType::UMESSAGE_TYPE_UNSPECIFIED,
+            None => Some(UMessageType::UMESSAGE_TYPE_UNSPECIFIED),
         };
         dbg!("_type: {:?}", _type);
 
@@ -372,7 +350,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         _uattributes.special_fields = _special_fields;
        }
         _uattributes.id = __id;
-        _uattributes.type_ = _type.into();
+        _uattributes.type_ = _type.unwrap().into();
 
         
         if !(_source.0.clone() == UUri::default()) {
@@ -381,7 +359,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         if!(_sink.0.clone() == UUri::default()){
             _uattributes.sink = MessageField(Some(Box::new(_sink.0)));
             }
-            _uattributes.priority = _priority.into();
+            _uattributes.priority = _priority.unwrap().into();
             _uattributes.ttl = _ttl.into();
             _uattributes.permission_level = Some(_permission_level.into());
             _uattributes.commstatus =Some(_commstatus.unwrap().into());
@@ -400,31 +378,13 @@ impl<'de> Deserialize<'de> for WrapperUPayload {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-
-        fn from_str_format(s: &str) -> UPayloadFormat {
-            match s {
-                "UPAYLOAD_FORMAT_JSON" => UPayloadFormat::UPAYLOAD_FORMAT_JSON,
-                "UPAYLOAD_FORMAT_PROTOBUF" => UPayloadFormat::UPAYLOAD_FORMAT_PROTOBUF,
-                "UPAYLOAD_FORMAT_RAW" => UPayloadFormat::UPAYLOAD_FORMAT_RAW,
-                "UPAYLOAD_FORMAT_SOMEIP" => UPayloadFormat::UPAYLOAD_FORMAT_SOMEIP,
-
-                "UPAYLOAD_FORMAT_PROTOBUF_WRAPPED_IN_ANY" => {
-                    UPayloadFormat::UPAYLOAD_FORMAT_PROTOBUF_WRAPPED_IN_ANY
-                }
-                "UPAYLOAD_FORMAT_SOMEIP_TLV" => UPayloadFormat::UPAYLOAD_FORMAT_SOMEIP_TLV,
-                "UPAYLOAD_FORMAT_TEXT" => UPayloadFormat::UPAYLOAD_FORMAT_TEXT,
-                "UPAYLOAD_FORMAT_UNSPECIFIED" => UPayloadFormat::UPAYLOAD_FORMAT_UNSPECIFIED,
-                _ => UPayloadFormat::UPAYLOAD_FORMAT_UNSPECIFIED,
-            }
-        }
-
         let _format = match value.get("format") {
-            Some(_format) => from_str_format(
+            Some(_format) => UPayloadFormat::from_str(
                 _format
                     .as_str()
                     .expect("Deserialize:something wrong with _type field"),
             ),
-            None => UPayloadFormat::UPAYLOAD_FORMAT_UNSPECIFIED,
+            None => Some(UPayloadFormat::UPAYLOAD_FORMAT_UNSPECIFIED),
         };
 
         let _length = match value.get("length") {
@@ -447,7 +407,7 @@ impl<'de> Deserialize<'de> for WrapperUPayload {
 
         Ok(WrapperUPayload(UPayload {
             length: Some(_length),
-            format: _format.into(),
+            format: _format.unwrap().into(),
             data: _data.into(),
             special_fields: _special_fields,
         }))
