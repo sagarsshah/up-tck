@@ -30,7 +30,7 @@ use up_rust::{
     UPayloadFormat, UPriority, UResource, UUri, UUID,
 };
 
-use protobuf::{MessageField, SpecialFields};
+use protobuf::{Enum, MessageField, SpecialFields};
 
 pub fn convert_json_to_jsonstring<T: serde::Serialize>(value: &T) -> String {
     serde_json::to_string(value).expect("Failed to convert to JSON string")
@@ -212,29 +212,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-        // Conversion function from string to enum variant
-        fn from_str_comstatus(s: &str) -> UCode {
-            match s {
-                "ABORTED" => UCode::ABORTED,
-                "OK" => UCode::OK,
-                "CANCELLED" => UCode::CANCELLED,
-                "UNKOWN" => UCode::UNKNOWN,
-                "INVALID_ARGUMENT" => UCode::INVALID_ARGUMENT,
-                "DEADLINE_EXCEEDED" => UCode::DEADLINE_EXCEEDED,
-                "NOT_FOUND" => UCode::NOT_FOUND,
-                "ALREADY_EXISTS" => UCode::ALREADY_EXISTS,
-                "PERMISSION_DENIED" => UCode::PERMISSION_DENIED,
-                "UNAUTHENTICATED" => UCode::UNAUTHENTICATED,
-                "RESOURCE_EXHAUSTED" => UCode::RESOURCE_EXHAUSTED,
-                "FAILED_PRECONDITION" => UCode::FAILED_PRECONDITION,
-                "OUT_OF_RANGE" => UCode::OUT_OF_RANGE,
-                "UNIMPLEMENTED" => UCode::UNIMPLEMENTED,
-                "INTERNAL" => UCode::INTERNAL,
-                "UNAVAILABLE" => UCode::UNAVAILABLE,
-                "DATA_LOSS" => UCode::DATA_LOSS,
-                &_ => todo!(),
-            }
-        }
+        
         fn from_str_priority(s: &str) -> UPriority {
             match s {
                 "UPRIORITY_UNSPECIFIED" => UPriority::UPRIORITY_UNSPECIFIED,
@@ -340,12 +318,12 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         };
 
         let _commstatus = match value.get("commstatus") {
-            Some(_commstatus) => from_str_comstatus(
-                _commstatus
-                    .as_str()
-                    .expect("Deserialize:something wrong with commstatus field"),
+            Some(_commstatus) => UCode::from_str(
+                    _commstatus
+                     .as_str()
+                     .expect("Deserialize:something wrong with commstatus field"),
             ),
-            None => UCode::OUT_OF_RANGE,
+            None => Some(UCode::OUT_OF_RANGE),
         };
 
         let _reqid_msb = match value.get("reqid").and_then(|resource| resource.get("msb")) {
@@ -406,7 +384,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             _uattributes.priority = _priority.into();
             _uattributes.ttl = _ttl.into();
             _uattributes.permission_level = Some(_permission_level.into());
-            _uattributes.commstatus = Some(_commstatus.into());
+            _uattributes.commstatus =Some(_commstatus.unwrap().into());
             _uattributes.reqid = __reqid;
             _uattributes.token= Some(_token.to_owned());
             _uattributes.traceparent = Some(_traceparent.to_owned());
