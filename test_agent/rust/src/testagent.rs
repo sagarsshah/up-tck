@@ -27,6 +27,7 @@ use serde_json::Value;
 use up_rust::{Data, UCode, UListener};
 use up_rust::{UMessage, UStatus, UTransport};
 
+use log::error;
 use std::io::{Read, Write};
 use std::{
     collections::HashMap,
@@ -45,12 +46,12 @@ pub struct JsonResponseData {
     ue: String,
     test_id: String
 }
-
+#[derive(Clone)]
 pub struct SocketTestAgent {
     utransport: UTransportSocket,
     clientsocket: Arc<Mutex<TcpStreamSync>>,
     clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
-    listener_map: Vec<String>,
+  //  listener_map: Vec<String>,
 }
 
 #[async_trait]
@@ -73,11 +74,17 @@ impl UListener for SocketTestAgent {
 
         let mut _value:HashMap<String,String> =  HashMap::new();
         _value.insert("value".into(),__payload.into());
-        let _value_str = serde_json::to_string(&_value).expect("issue in converting to payload");
+        let Ok(_value_str) = serde_json::to_string(&_value) else {
+            error!("issue in converting to payload"); 
+            return;
+        };
        
         let mut _payload:HashMap<String,String> =  HashMap::new();
         _payload.insert("payload".into(),_value_str);
-        let _payload_str = serde_json::to_string(&_payload).expect("issue in converting to payload");
+        let Ok(_payload_str) = serde_json::to_string(&_payload) else {
+            error!("issue in converting to payload"); 
+            return;
+        };
 
         let mut json_message: JsonResponseData = JsonResponseData {
             action: constants::RESPONSE_ON_RECEIVE.to_owned(),
@@ -99,20 +106,20 @@ impl UListener for SocketTestAgent {
     }
 }
 
-impl Clone for SocketTestAgent {
-    fn clone(&self) -> Self {
-        SocketTestAgent {
-            utransport: self.utransport.clone(),
-            clientsocket: self.clientsocket.clone(),
-            clientsocket_to_tm:self.clientsocket_to_tm.clone(),
-            listener_map: self.listener_map.clone(),
-        }
-    }
+// impl Clone for SocketTestAgent {
+//     fn clone(&self) -> Self {
+//         SocketTestAgent {
+//             utransport: self.utransport.clone(),
+//             clientsocket: self.clientsocket.clone(),
+//             clientsocket_to_tm:self.clientsocket_to_tm.clone(),
+//             listener_map: self.listener_map.clone(),
+//         }
+//     }
 
-    fn clone_from(&mut self, source: &Self) {
-        *self = source.clone()
-    }
-}
+//     fn clone_from(&mut self, source: &Self) {
+//         *self = source.clone()
+//     }
+// }
 
 impl SocketTestAgent {
     pub fn new(test_clientsocket: TcpStreamSync, test_clientsocket_to_tm : TcpStreamSync, utransport: UTransportSocket) -> Self {
@@ -124,7 +131,7 @@ impl SocketTestAgent {
             utransport,
             clientsocket,
             clientsocket_to_tm,
-            listener_map: Vec::new(),
+         //   listener_map: Vec::new(),
         }
     }
 
