@@ -31,7 +31,7 @@ mod utils;
 
 use std::thread;
 
-use crate::constants::*;
+use crate::constants::TEST_MANAGER_ADDR;
 use testagent::SocketTestAgent;
 use u_transport_socket::UTransportSocket;
 mod testagent;
@@ -41,7 +41,14 @@ use tokio::runtime::Runtime;
 fn main() {
     let handle = thread::spawn(|| {
         // Create a new Tokio runtime
-        let rt = Runtime::new().unwrap();
+        //let rt = Runtime::new().unwrap();
+        let rt = if let Ok(rt) = Runtime::new() {
+            rt
+        } else {
+            eprintln!("Error creating runtime");
+            return;
+            //  return Err();
+        };
 
         let test_agent_socket: TcpStreamSync =
             TcpStreamSync::connect(TEST_MANAGER_ADDR).expect("issue in connecting  sync socket");

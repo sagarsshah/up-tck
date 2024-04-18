@@ -61,7 +61,7 @@ impl UListener for SocketTestAgent {
     async fn on_receive(&self, msg: UMessage) {
         dbg!("OnReceive called");
 
-        let __payload = match &msg.payload.data {
+        let data_payload = match &msg.payload.data {
             Some(data) => {
                 // Now we have access to the Data enum
                 match data {
@@ -79,16 +79,16 @@ impl UListener for SocketTestAgent {
             }
         };
 
-        let mut _value: HashMap<String, String> = HashMap::new();
-        _value.insert("value".into(), __payload.into());
-        let Ok(_value_str) = serde_json::to_string(&_value) else {
+        let mut value: HashMap<String, String> = HashMap::new();
+        value.insert("value".into(), data_payload.into());
+        let Ok(value_str) = serde_json::to_string(&value) else {
             error!("issue in converting to payload");
             return;
         };
 
-        let mut _payload: HashMap<String, String> = HashMap::new();
-        _payload.insert("payload".into(), _value_str);
-        let Ok(_payload_str) = serde_json::to_string(&_payload) else {
+        let mut payload: HashMap<String, String> = HashMap::new();
+        payload.insert("payload".into(), value_str);
+        let Ok(payload_str) = serde_json::to_string(&payload) else {
             error!("issue in converting to payload");
             return;
         };
@@ -100,7 +100,7 @@ impl UListener for SocketTestAgent {
             test_id: "1".to_string(),
         };
 
-        json_message.data.insert("data".into(), _payload_str);
+        json_message.data.insert("data".into(), payload_str);
 
         //<SocketTestAgent as Clone>::clone(&self)
         //todo: revisit this and check:Better pattern might be to have the UListener be impled on a different struct
