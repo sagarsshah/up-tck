@@ -22,6 +22,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+use log::error;
 use serde::{Deserialize, Deserializer};
 use serde_json::{Number, Value};
 use up_rust::{
@@ -44,6 +45,9 @@ impl<'de> Deserialize<'de> for WrapperUUri {
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
         let mut _authority = UAuthority::new();
+        let mut _uuri: UUri = UUri::new();
+        let mut _entity = UEntity::new();
+        let mut _resource = UResource::new();
         //update authority
         _authority.name = value
             .get("authority")
@@ -53,27 +57,28 @@ impl<'de> Deserialize<'de> for WrapperUUri {
       
 
 
-        _authority.number = {
+        
             if let Some(_authority_number_ip) = value
                 .get("authority")
                 .and_then(|authority| authority.get("number"))
                 .and_then(|number| number.get("ip"))
             {
-                Some(up_rust::Number::Ip(
-                    _authority_number_ip.to_string().as_bytes().to_vec(),
+                _authority.number = Some(up_rust::Number::Ip(
+                      _authority_number_ip.to_string().as_bytes().to_vec(),
                 ))
             } else if let Some(_authority_number_id) = value
                 .get("authority")
                 .and_then(|authority| authority.get("number"))
                 .and_then(|number| number.get("id"))
             {
-                Some(up_rust::Number::Id(
+                _authority.number =  Some(up_rust::Number::Id(
                     _authority_number_id.to_string().as_bytes().to_vec(),
                 ))
-            } else {
-                None
-            }
-        };
+            };
+            //  else {
+            //     ()
+            // }
+        
         // let _authority_number_ip = match value
         //     .get("authority")
         //     .and_then(|authority| authority.get("number"))
@@ -107,107 +112,165 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         // }
 
         //update entity
-        let _entity_name = match value.get("entity").and_then(|entity| entity.get("name")) {
-            Some(_entity_name) => _entity_name.as_str(),
-            None => Some("default"),
-        };
-        let _entity_id = match value.get("entity").and_then(|entity| entity.get("id")) {
-            Some(_entity_id) => _entity_id
-                .clone()
-                .as_str()
-                .expect("not a string")
-                .parse::<u32>()
-                .expect("issue in converting to u32"),
-            None => 0,
-        };
-        let _entity_version_major = match value
-            .get("entity")
-            .and_then(|entity| entity.get("version_major"))
-        {
-            Some(_entity_version_major) => _entity_version_major
-                .clone()
-                .as_str()
-                .expect("not a string")
-                .parse::<u32>()
-                .expect("issue in converting to u32"),
+        // let _entity_name = match value.get("entity").and_then(|entity| entity.get("name")) {
+        //     Some(_entity_name) => _entity_name.as_str(),
+        //     None => Some("default"),
+        // };
 
-            None => 0,
-        };
-        let _entity_version_minor = match value
-            .get("entity")
-            .and_then(|entity| entity.get("version_minor"))
-        {
-            Some(_entity_version_minor) => _entity_version_minor
-                .clone()
-                .as_str()
-                .expect("not a string")
-                .parse::<u32>()
-                .expect("issue in converting to u32"),
-            None => 0,
-        };
-        let _entity_special_fields = SpecialFields::default();
-        let mut _entity = UEntity::new();
-        _entity.name = _entity_name.unwrap_or_default().to_string();
-        if !(_entity_id == 0) {
-            _entity.id = Some(_entity_id)
-        };
-        if !(_entity_version_major == 0) {
-            _entity.version_major = Some(_entity_version_major)
-        };
-        if !(_entity_version_minor == 0) {
-            _entity.version_minor = Some(_entity_version_minor)
-        };
-        _entity.special_fields = _entity_special_fields;
+           if let Some(entity) = value.get("entity").and_then(|entity| entity.get("name")) {
+           
+            _entity.name = entity.as_str().unwrap_or_default().to_string()
+            };
+
+            if let Some(entity) = value.get("entity").and_then(|entity| entity.get("name"))  {
+                
+                    if let Ok(_entity_id_parsed) = entity
+                        .clone()
+                        .as_str()
+                        .expect("not a string")
+                        .parse::<u32>()
+                    {
+                        _entity.id = Some(_entity_id_parsed);
+                    } else {
+                        ()
+                    }
+                
+            };
+            
+        
+
+        // let _entity_id = match value.get("entity").and_then(|entity| entity.get("id")) {
+        //     Some(_entity_id) => _entity_id
+        //         .clone()
+        //         .as_str()
+        //         .expect("not a string")
+        //         .parse::<u32>()
+        //         .expect("issue in converting to u32"),
+        //     None => 0,
+        // };
+
+        if let Some(entity) = value.get("entity").and_then(|entity| entity.get("version_major").and_then(|v| v.as_str())) {
+            // Attempt to parse the string to u32
+            _entity.version_major = Some(entity.parse::<u32>().unwrap_or_else(|_| {
+                // Handle the error here, for now, just use 0 as default value
+                0
+            }))
+        } ;
+        
+        if let Some(entity) = value.get("entity").and_then(|entity| entity.get("version_minor").and_then(|v| v.as_str())) {
+            // Attempt to parse the string to u32
+            _entity.version_minor = Some(entity.parse::<u32>().unwrap_or_else(|_| {
+                // Handle the error here, for now, just use 0 as default value
+                0
+            }))
+        } ;
+
+        // let _entity_version_major = match value
+        //     .get("entity")
+        //     .and_then(|entity| entity.get("version_major"))
+        // {
+        //     Some(_entity_version_major) => _entity_version_major
+        //         .clone()
+        //         .as_str()
+        //         .expect("not a string")
+        //         .parse::<u32>()
+        //         .expect("issue in converting to u32"),
+
+        //     None => 0,
+        // };
+        // let _entity_version_minor = match value
+        //     .get("entity")
+        //     .and_then(|entity| entity.get("version_minor"))
+        // {
+        //     Some(_entity_version_minor) => _entity_version_minor
+        //         .clone()
+        //         .as_str()
+        //         .expect("not a string")
+        //         .parse::<u32>()
+        //         .expect("issue in converting to u32"),
+        //     None => 0,
+        // };
+        //let _entity_special_fields = SpecialFields::default();
+       
+       // _entity.name = _entity_name.unwrap_or_default().to_string();
+    
+        // if !(_entity_version_major == 0) {
+        //     _entity.version_major = Some(_entity_version_major)
+        // };
+        // if !(_entity_version_minor == 0) {
+        //     _entity.version_minor = Some(_entity_version_minor)
+        // };
+        _entity.special_fields = SpecialFields::default();
         let ___entity = MessageField(Some(Box::new(_entity)));
+        
+      if let Some(resource) = value.get("resource").and_then(|resource| resource.get("name")) {
+            
+            //_resource.name= resource.as_str().expect("issue in name").to_owned()
 
-        let _resource_name = match value
-            .get("resource")
-            .and_then(|resource| resource.get("name"))
-        {
-            Some(_resource_name) => _resource_name.as_str().expect("issue in name"),
-            None => "default",
-        };
-        let _resource_instance = match value
-            .get("resource")
-            .and_then(|resource| resource.get("instance"))
-        {
-            Some(_resource_instance) => _resource_instance.as_str().map(|s| s.to_owned()),
-            None => Some(String::from("default")),
-        };
-        let _resource_message = match value
-            .get("resource")
-            .and_then(|resource| resource.get("message"))
-        {
-            Some(_resource_message) => _resource_message.as_str().map(|s| s.to_owned()),
-            None => Some(String::from("default")),
-        };
-        let _resource_id = match value
-            .get("resource")
-            .and_then(|resource| resource.get("id"))
-        {
-            Some(_resource_id) => _resource_id
-                .clone()
-                .as_str()
-                .expect("not a string")
-                .parse::<u32>()
-                .expect("issue in converting to u32"),
-            None => 0,
-        };
-        let _resource_special_fields = SpecialFields::default();
-        let mut _resource = UResource::new();
-        _resource.name = _resource_name.to_owned();
-        _resource.instance = _resource_instance;
-        _resource.message = _resource_message;
-        if !(_resource_id == 0) {
-            _resource.id = Some(_resource_id)
-        };
+            if let Some(name) = resource.as_str() {
+                _resource.name = name.to_owned();
+            } else {
+                // Handle the case where the "name" field is not a string
+                error!("Error: Name field is not a string in resource");
+                // Optionally add fallback behavior here, such as providing a default name
+            }
+            } ;
+        
+          
+
+        // let _resource_name = match value
+        //     .get("resource")
+        //     .and_then(|resource| resource.get("name"))
+        // {
+        //     Some(_resource_name) => _resource_name.as_str().expect("issue in name"),
+        //     None => "default",
+        // };
+        // let _resource_instance = match value
+        //     .get("resource")
+        //     .and_then(|resource| resource.get("instance"))
+        // {
+        //     Some(_resource_instance) => _resource_instance.as_str().map(|s| s.to_owned()),
+        //     None => Some(String::from("default")),
+        // };
+        // let _resource_message = match value
+        //     .get("resource")
+        //     .and_then(|resource| resource.get("message"))
+        // {
+        //     Some(_resource_message) => _resource_message.as_str().map(|s| s.to_owned()),
+        //     None => Some(String::from("default")),
+        // };
+        _resource.instance = value.get("resource").and_then(|resource| resource.get("instance").and_then(|v| v.as_str().map(|s| s.to_owned())));
+        _resource.message = value.get("resource").and_then(|resource| resource.get("message").and_then(|v| v.as_str().map(|s| s.to_owned())));
+        
+        _resource.id= value.get("resource")
+    .and_then(|resource| resource.get("id"))
+    .and_then(|id| id.as_str().and_then(|s| s.parse::<u32>().ok()));
+
+        // let _resource_id = match value
+        //     .get("resource")
+        //     .and_then(|resource| resource.get("id"))
+        // {
+        //     Some(_resource_id) => _resource_id
+        //         .clone()
+        //         .as_str()
+        //         .expect("not a string")
+        //         .parse::<u32>()
+        //         .expect("issue in converting to u32"),
+        //     None => 0,
+        // };
+       // let _resource_special_fields = SpecialFields::default();
+       
+       // _resource.name = _resource_name.to_owned();
+       // _resource.instance = _resource_instance;
+        //_resource.message = _resource_message;
+        // if !(_resource_id == 0) {
+        //     _resource.id = Some(_resource_id)
+        // };
         let ___resource = MessageField(Some(Box::new(_resource)));
-        let _special_fields = SpecialFields::default();
-        let mut _uuri: UUri = UUri::new();
+//        let _special_fields = SpecialFields::default();
+      
 
         if!( _authority.get_name() == None
-        //if !(authority_name.clone() == None
-            //&& _authority_number_id.clone() == vec![0]
             && _authority.number == None)
         {
             dbg!("authority is not default");
@@ -484,7 +547,7 @@ mod tests {
 }
 
 // use prost::Message; // Import the prost crate for protobuf message handling
-use std::fmt::Debug;
+use std::{default, fmt::Debug};
 
 // Function to serialize any protobuf message to JSON string
 // fn protobuf_to_json<M: Message>(message: &M) -> Result<String, serde_json::Error> {
