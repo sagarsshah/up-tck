@@ -23,7 +23,7 @@
  */
 
 use serde::{Deserialize, Deserializer};
-use serde_json::Value;
+use serde_json::{Number, Value};
 use up_rust::{
     Data, UAttributes, UAuthority, UCode, UEntity, UMessage, UMessageType, UPayload,
     UPayloadFormat, UPriority, UResource, UUri, UUID,
@@ -43,48 +43,68 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-
+        let mut _authority = UAuthority::new();
         //update authority
-        let _authority_name = value
+        let authority_name = value
             .get("authority")
             .and_then(|authority| authority.get("name"))
             .and_then(|name| name.as_str())
             .map(String::from);
 
-        let _authority_number_ip = match value
-            .get("authority")
-            .and_then(|authority| authority.get("number"))
-            .and_then(|number| number.get("ip"))
-        {
-            Some(_authority_number_ip) => _authority_number_ip.to_string().as_bytes().to_vec(),
-            None => {
-                let default: Vec<u8> = vec![0];
-                default
+        _authority.number = {
+            if let Some(_authority_number_ip) = value
+                .get("authority")
+                .and_then(|authority| authority.get("number"))
+                .and_then(|number| number.get("ip"))
+            {
+                Some(up_rust::Number::Ip(
+                    _authority_number_ip.to_string().as_bytes().to_vec(),
+                ))
+            } else if let Some(_authority_number_id) = value
+                .get("authority")
+                .and_then(|authority| authority.get("number"))
+                .and_then(|number| number.get("id"))
+            {
+                Some(up_rust::Number::Id(
+                    _authority_number_id.to_string().as_bytes().to_vec(),
+                ))
+            } else {
+                None
             }
         };
-        let _authority_number_id = match value
-            .get("authority")
-            .and_then(|authority| authority.get("number"))
-            .and_then(|number| number.get("id"))
-        {
-            Some(_authority_number_id) => _authority_number_id.to_string().as_bytes().to_vec(),
-            None => {
-                let default: Vec<u8> = vec![0];
-                default
-            }
-        };
+        // let _authority_number_ip = match value
+        //     .get("authority")
+        //     .and_then(|authority| authority.get("number"))
+        //     .and_then(|number| number.get("ip"))
+        // {
+        //     Some(_authority_number_ip) => _authority_number_ip.to_string().as_bytes().to_vec(),
+        //     None => {
+        //         let default: Vec<u8> = vec![0];
+        //         default
+        //     }
+        // };
+        // let _authority_number_id = match value
+        //     .get("authority")
+        //     .and_then(|authority| authority.get("number"))
+        //     .and_then(|number| number.get("id"))
+        // {
+        //     Some(_authority_number_id) => _authority_number_id.to_string().as_bytes().to_vec(),
+        //     None => {
+        //         let default: Vec<u8> = vec![0];
+        //         default
+        //     }
+        // };
 
-        let mut _authority = UAuthority::new();
-        if !(_authority_name.clone() == Some("default".to_owned())) {
-            _authority.name = _authority_name.clone();
+        if !(authority_name.clone() == Some("default".to_owned())) {
+            _authority.name = authority_name.clone();
         }
 
-        if !(_authority_number_id.clone() == vec![0]) {
-            _authority.set_id(_authority_number_id.clone());
-        }
-        if !(_authority_number_ip.clone() == vec![0]) {
-            _authority.set_ip(_authority_number_ip.clone());
-        }
+        // if !(_authority_number_id.clone() == vec![0]) {
+        //     _authority.set_id(_authority_number_id.clone());
+        // }
+        // if !(_authority_number_ip.clone() == vec![0]) {
+        //     _authority.set_ip(_authority_number_ip.clone());
+        // }
 
         //update entity
         let _entity_name = match value.get("entity").and_then(|entity| entity.get("name")) {
@@ -184,9 +204,9 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         let ___resource = MessageField(Some(Box::new(_resource)));
         let _special_fields = SpecialFields::default();
         let mut _uuri: UUri = UUri::new();
-        if !(_authority_name.clone() == None
-            && _authority_number_id.clone() == vec![0]
-            && _authority_number_ip.clone() == vec![0])
+        if !(authority_name.clone() == None
+            //&& _authority_number_id.clone() == vec![0]
+            && _authority.number == None)
         {
             dbg!("authority is not default");
             _uuri.authority = MessageField(Some(Box::new(_authority)));

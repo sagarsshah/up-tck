@@ -93,7 +93,7 @@ impl UListener for SocketTestAgent {
             return;
         };
 
-        let mut json_message: JsonResponseData = JsonResponseData {
+        let mut json_message = JsonResponseData {
             action: constants::RESPONSE_ON_RECEIVE.to_owned(),
             data: HashMap::new(),
             ue: "rust".to_string(),
