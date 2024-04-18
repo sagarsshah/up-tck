@@ -131,10 +131,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
                         .parse::<u32>()
                     {
                         _entity.id = Some(_entity_id_parsed);
-                    } else {
-                        ()
-                    }
-                
+                    } 
             };
             
         
@@ -201,7 +198,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         //     _entity.version_minor = Some(_entity_version_minor)
         // };
         _entity.special_fields = SpecialFields::default();
-        let ___entity = MessageField(Some(Box::new(_entity)));
+     //   let ___entity = MessageField(Some(Box::new(_entity)));
         
       if let Some(resource) = value.get("resource").and_then(|resource| resource.get("name")) {
             
@@ -266,7 +263,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         // if !(_resource_id == 0) {
         //     _resource.id = Some(_resource_id)
         // };
-        let ___resource = MessageField(Some(Box::new(_resource)));
+     //   let ___resource = MessageField(Some(Box::new(_resource)));
 //        let _special_fields = SpecialFields::default();
       
 
@@ -276,8 +273,8 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             dbg!("authority is not default");
             _uuri.authority = MessageField(Some(Box::new(_authority)));
         }
-        _uuri.entity = ___entity;
-        _uuri.resource = ___resource;
+        _uuri.entity = MessageField(Some(Box::new(_entity)));
+        _uuri.resource = MessageField(Some(Box::new(_resource)));
 
         Ok(WrapperUUri(_uuri))
     }
@@ -290,38 +287,70 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
+        let mut _uattributes = UAttributes::new();
 
-        let _priority = match value.get("priority") {
-            Some(_priority) => UPriority::from_str(
-                _priority
-                    .as_str()
-                    .expect("Deserialize:something wrong with priority field"),
-            ),
-            None => Some(UPriority::UPRIORITY_UNSPECIFIED),
-        };
-        dbg!("_priority: {:?}", _priority);
+        // let _priority = match value.get("priority") {
+        //     Some(_priority) => UPriority::from_str(
+        //         _priority
+        //             .as_str()
+        //             .expect("Deserialize:something wrong with priority field"),
+        //     ),
+        //     None => Some(UPriority::UPRIORITY_UNSPECIFIED),
+        // };
+        // 
 
-        let _type = match value.get("type") {
-            Some(_type) => UMessageType::from_str(
-                _type
-                    .as_str()
-                    .expect("Deserialize:something wrong with _type field"),
-            ),
-            None => Some(UMessageType::UMESSAGE_TYPE_UNSPECIFIED),
-        };
-        dbg!("_type: {:?}", _type);
+        _uattributes.priority = value.get("priority").and_then(|priority| {
+            priority
+                .as_str()
+                .map(|s| UPriority::from_str(s).unwrap_or_else(|| {
+                    error!("Deserialize: Something wrong with priority field");
+                    UPriority::UPRIORITY_UNSPECIFIED
+                }))
+        }).unwrap().into();
+        dbg!("_uattributes.priority: {:?}", _uattributes.priority.clone());
 
-        let _source = match value.get("source") {
-            Some(_source) => {
-                serde_json::from_value::<WrapperUUri>(_source.clone()).unwrap_or_default()
-            }
-            None => WrapperUUri::default(),
-        };
 
-        let _sink = match value.get("sink") {
-            Some(_sink) => serde_json::from_value::<WrapperUUri>(_sink.clone()).unwrap_or_default(),
-            None => WrapperUUri::default(),
-        };
+        _uattributes.type_ = value.get("type").and_then(|type_| {
+            type_
+                .as_str()
+                .map(|s| UMessageType::from_str(s).unwrap_or_else(|| {
+                    error!("Deserialize: Something wrong with priority field");
+                    UMessageType::UMESSAGE_TYPE_UNSPECIFIED
+                }))
+        }).unwrap().into();
+        dbg!("_uattributes.type_: {:?}", _uattributes.type_.clone());
+
+
+        // let _type = match value.get("type") {
+        //     Some(_type) => UMessageType::from_str(
+        //         _type
+        //             .as_str()
+        //             .expect("Deserialize:something wrong with _type field"),
+        //     ),
+        //     None => Some(UMessageType::UMESSAGE_TYPE_UNSPECIFIED),
+        // };
+        // dbg!("_type: {:?}", _type);
+
+        // let _source = match value.get("source") {
+        //     Some(_source) => {
+        //         serde_json::from_value::<WrapperUUri>(_source.clone()).unwrap_or_default()
+        //     }
+        //     None => WrapperUUri::default(),
+        // };
+    
+        let _source = value
+    .get("source")
+    .and_then(|s| serde_json::from_value::<WrapperUUri>(s.clone()).ok()).unwrap().0;
+
+    let _sink = value
+    .get("sink")
+    .and_then(|s| serde_json::from_value::<WrapperUUri>(s.clone()).ok()).unwrap().0;
+
+
+        // let _sink = match value.get("sink") {
+        //     Some(_sink) => serde_json::from_value::<WrapperUUri>(_sink.clone()).unwrap_or_default(),
+        //     None => WrapperUUri::default(),
+        // };
 
         let _id_msb = match value.get("id").and_then(|resource| resource.get("msb")) {
             Some(_id_msb) => _id_msb
@@ -419,20 +448,20 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         };
         // special field //todo
         let _special_fields = SpecialFields::default();
-        let mut _uattributes = UAttributes::new();
+        
         if _special_fields.ne(&SpecialFields::default()) {
             _uattributes.special_fields = _special_fields;
         }
         _uattributes.id = __id;
-        _uattributes.type_ = _type.unwrap().into();
+       // _uattributes.type_ = _type.unwrap().into();
 
-        if !(_source.0.clone() == UUri::default()) {
-            _uattributes.source = MessageField(Some(Box::new(_source.0)));
+        if (_source!= UUri::default()) {
+            _uattributes.source = MessageField(Some(Box::new(_source)));
         }
-        if !(_sink.0.clone() == UUri::default()) {
-            _uattributes.sink = MessageField(Some(Box::new(_sink.0)));
+        if (_sink!= UUri::default()) {
+            _uattributes.sink = MessageField(Some(Box::new(_sink)));
         }
-        _uattributes.priority = _priority.unwrap().into();
+        //_uattributes.priority = _priority.unwrap().into();
         _uattributes.ttl = _ttl.into();
         _uattributes.permission_level = Some(_permission_level.into());
         _uattributes.commstatus = Some(_commstatus.unwrap().into());
