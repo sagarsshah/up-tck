@@ -45,11 +45,13 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         let value: Value = Deserialize::deserialize(deserializer)?;
         let mut _authority = UAuthority::new();
         //update authority
-        let authority_name = value
+        _authority.name = value
             .get("authority")
             .and_then(|authority| authority.get("name"))
             .and_then(|name| name.as_str())
             .map(String::from);
+      
+
 
         _authority.number = {
             if let Some(_authority_number_ip) = value
@@ -95,9 +97,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         //     }
         // };
 
-        if !(authority_name.clone() == Some("default".to_owned())) {
-            _authority.name = authority_name.clone();
-        }
+        
 
         // if !(_authority_number_id.clone() == vec![0]) {
         //     _authority.set_id(_authority_number_id.clone());
@@ -204,7 +204,9 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         let ___resource = MessageField(Some(Box::new(_resource)));
         let _special_fields = SpecialFields::default();
         let mut _uuri: UUri = UUri::new();
-        if !(authority_name.clone() == None
+
+        if!( _authority.get_name() == None
+        //if !(authority_name.clone() == None
             //&& _authority_number_id.clone() == vec![0]
             && _authority.number == None)
         {
