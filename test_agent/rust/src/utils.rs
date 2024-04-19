@@ -346,57 +346,99 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
     .get("sink")
     .and_then(|s| serde_json::from_value::<WrapperUUri>(s.clone()).ok()).unwrap().0;
 
+    if _source!= UUri::default() {
+        _uattributes.source = MessageField(Some(Box::new(_source)));
+    }
+    if _sink!= UUri::default() {
+        _uattributes.sink = MessageField(Some(Box::new(_sink)));
+    }
+      
 
-        // let _sink = match value.get("sink") {
-        //     Some(_sink) => serde_json::from_value::<WrapperUUri>(_sink.clone()).unwrap_or_default(),
-        //     None => WrapperUUri::default(),
+        // let _id_msb = match value.get("id").and_then(|resource| resource.get("msb")) {
+        //     Some(_id_msb) => _id_msb
+        //         .clone()
+        //         .as_str()
+        //         .expect("not a string")
+        //         .parse::<u64>()
+        //         .expect("issue in converting to u32"),
+        //     None => 0,
+        // };
+        // let _id_lsb = match value.get("id").and_then(|resource| resource.get("lsb")) {
+        //     Some(_id_lsb) => _id_lsb
+        //         .clone()
+        //         .as_str()
+        //         .expect("not a string")
+        //         .parse::<u64>()
+        //         .expect("issue in converting to u32"),
+        //     None => 0,
         // };
 
-        let _id_msb = match value.get("id").and_then(|resource| resource.get("msb")) {
-            Some(_id_msb) => _id_msb
-                .clone()
-                .as_str()
-                .expect("not a string")
-                .parse::<u64>()
-                .expect("issue in converting to u32"),
-            None => 0,
-        };
-        let _id_lsb = match value.get("id").and_then(|resource| resource.get("lsb")) {
-            Some(_id_lsb) => _id_lsb
-                .clone()
-                .as_str()
-                .expect("not a string")
-                .parse::<u64>()
-                .expect("issue in converting to u32"),
-            None => 0,
-        };
-        let ___id = UUID {
-            msb: _id_msb,
-            lsb: _id_lsb,
-            special_fields: SpecialFields::default(),
-        };
+        let mut ___id = UUID::new(); 
+        if let Some(resource) = value.get("id").and_then(|resource| resource.get("lsb")) {
+            if let Some(id_str) = resource.as_str() {
+                if let Ok(parsed_id) = id_str.parse::<u64>() {
+                    ___id.lsb = parsed_id;
+                } else {
+                    error!("Error: Failed to parse _id_lsb as u64");
+                    
+                }
+            } else {
+                error!("Error: _id_lsb is not a string");
+                
+            }
+        } ;
+        if let Some(resource) = value.get("id").and_then(|resource| resource.get("msb")) {
+            if let Some(id_str) = resource.as_str() {
+                if let Ok(parsed_id) = id_str.parse::<u64>() {
+                    ___id.msb = parsed_id;
+                } else {
+                    error!("Error: Failed to parse _id_msb as u64");
+                    
+                }
+            } else {
+                error!("Error: _id_msb is not a string");
+                
+            }
+        } ;
+           
 
-        let __id = MessageField(Some(Box::new(___id)));
+        _uattributes.id = MessageField(Some(Box::new(___id)));
 
-        let _ttl = match value.get("ttl") {
-            Some(_ttl) => _ttl
-                .as_str()
-                .unwrap_or_else(|| panic!("Deserialize: something wrong with ttl field"))
-                .parse::<u32>()
-                .expect("ttl parsing error"),
-            None => 0,
-        };
+        if let Some(_ttl) = value.get("ttl").and_then(|ttl| ttl.as_str()) {
+            if let Ok(parsed_ttl) = _ttl.parse::<u32>() {
+                _uattributes.ttl = parsed_ttl.into();
+            } else {
+                error!("Error: Failed to parse _ttl as u32");
+                
+            }};
+            
+            if let Some(_permission_level) = value.get("permission_level").and_then(|permission_level| permission_level.as_str()) {
+                if let Ok(parsed_permission_level) = _permission_level.parse::<u32>() {
+                    _uattributes.permission_level = Some(parsed_permission_level.into());
+                } else {
+                    error!("Error: Failed to parse permission_level as u32");
+                    
+                }};
+        
+        // let _ttl = match value.get("ttl") {
+        //     Some(_ttl) => _ttl
+        //         .as_str()
+        //         .unwrap_or_else(|| panic!("Deserialize: something wrong with ttl field"))
+        //         .parse::<u32>()
+        //         .expect("ttl parsing error"),
+        //     None => 0,
+        // };
 
-        let _permission_level = match value.get("permission_level") {
-            Some(_permission_level) => _permission_level
-                .as_str()
-                .unwrap_or_else(|| {
-                    panic!("Deserialize: something wrong with permission_level field")
-                })
-                .parse::<u32>()
-                .expect("permission_level parsing error"),
-            None => 0,
-        };
+        // let _permission_level = match value.get("permission_level") {
+        //     Some(_permission_level) => _permission_level
+        //         .as_str()
+        //         .unwrap_or_else(|| {
+        //             panic!("Deserialize: something wrong with permission_level field")
+        //         })
+        //         .parse::<u32>()
+        //         .expect("permission_level parsing error"),
+        //     None => 0,
+        // };
 
         let _commstatus = match value.get("commstatus") {
             Some(_commstatus) => UCode::from_str(
@@ -407,38 +449,99 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             None => Some(UCode::OUT_OF_RANGE),
         };
 
-        let _reqid_msb = match value.get("reqid").and_then(|resource| resource.get("msb")) {
-            Some(_reqid_msb) => _reqid_msb
-                .clone()
-                .as_str()
-                .expect("not a string")
-                .parse::<u64>()
-                .expect("issue in converting to u32"),
-            None => 0,
-        };
-        let _reqid_lsb = match value.get("reqid").and_then(|resource| resource.get("lsb")) {
-            Some(_reqid_lsb) => _reqid_lsb
-                .clone()
-                .as_str()
-                .expect("not a string")
-                .parse::<u64>()
-                .expect("issue in converting to u32"),
-            None => 0,
-        };
-        let ___reqid = UUID {
-            msb: _reqid_msb,
-            lsb: _reqid_lsb,
-            special_fields: SpecialFields::default(),
-        };
 
-        let __reqid = MessageField(Some(Box::new(___reqid)));
-
-        let _token = match value.get("token") {
-            Some(_token) => _token
+        _uattributes.commstatus = Some(value.get("commstatus").and_then(|commstatus_| {
+            commstatus_
                 .as_str()
-                .unwrap_or_else(|| panic!("Deserialize: something wrong with token field")),
-            None => "Null",
-        };
+                .map(|s| UCode::from_str(s).unwrap_or_else(|| {
+                    error!("Deserialize: Something wrong with commstatus field");
+                    UCode::OUT_OF_RANGE
+                }))
+        }).unwrap().into());
+        dbg!(" _uattributes.commstatus: {:?}",  _uattributes.commstatus.clone());
+
+        // let _reqid_msb = match value.get("reqid").and_then(|resource| resource.get("msb")) {
+        //     Some(_reqid_msb) => _reqid_msb
+        //         .clone()
+        //         .as_str()
+        //         .expect("not a string")
+        //         .parse::<u64>()
+        //         .expect("issue in converting to u32"),
+        //     None => 0,
+        // };
+        // let _reqid_lsb = match value.get("reqid").and_then(|resource| resource.get("lsb")) {
+        //     Some(_reqid_lsb) => _reqid_lsb
+        //         .clone()
+        //         .as_str()
+        //         .expect("not a string")
+        //         .parse::<u64>()
+        //         .expect("issue in converting to u32"),
+        //     None => 0,
+        // };
+        // let ___reqid = UUID {
+        //     msb: _reqid_msb,
+        //     lsb: _reqid_lsb,
+        //     special_fields: SpecialFields::default(),
+        // };
+
+       
+
+
+        let mut ___reqid = UUID::new(); 
+        if let Some(resource) = value.get("reqid").and_then(|resource| resource.get("lsb")) {
+            if let Some(id_str) = resource.as_str() {
+                if let Ok(parsed_id) = id_str.parse::<u64>() {
+                    ___reqid.lsb = parsed_id;
+                } else {
+                    eprintln!("Error: Failed to parse _id_lsb as u64");
+                    
+                }
+            } else {
+                eprintln!("Error: _id_lsb is not a string");
+                
+            }
+        } ;
+        if let Some(resource) = value.get("reqid").and_then(|resource| resource.get("msb")) {
+            if let Some(id_str) = resource.as_str() {
+                if let Ok(parsed_id) = id_str.parse::<u64>() {
+                    ___reqid.msb = parsed_id;
+                } else {
+                    eprintln!("Error: Failed to parse _id_msb as u64");
+                    
+                }
+            } else {
+                eprintln!("Error: _id_msb is not a string");
+                
+            }
+        } ;
+        _uattributes.reqid = MessageField(Some(Box::new(___reqid)));
+
+
+
+        // let _token = match value.get("token") {
+        //     Some(_token) => _token
+        //         .as_str()
+        //         .unwrap_or_else(|| panic!("Deserialize: something wrong with token field")),
+        //     None => "Null",
+        // };
+
+        if let Some(_token) = value.get("token") {
+            if let Some(token_str) = _token.as_str() {
+               _uattributes.token = Some(token_str.to_owned());
+            } else {
+                error!("Error: _token is not a string");
+               
+            }
+        } ;
+        if let Some(_traceparent) = value.get("token") {
+            if let Some(traceparent_str) = _traceparent.as_str() {
+               _uattributes.token = Some(traceparent_str.to_owned());
+            } else {
+                error!("Error: _token is not a string");
+               
+            }
+        } ;
+
 
         let _traceparent = match value.get("traceparent") {
             Some(_traceparent) => _traceparent
@@ -452,22 +555,9 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         if _special_fields.ne(&SpecialFields::default()) {
             _uattributes.special_fields = _special_fields;
         }
-        _uattributes.id = __id;
-       // _uattributes.type_ = _type.unwrap().into();
-
-        if (_source!= UUri::default()) {
-            _uattributes.source = MessageField(Some(Box::new(_source)));
-        }
-        if (_sink!= UUri::default()) {
-            _uattributes.sink = MessageField(Some(Box::new(_sink)));
-        }
-        //_uattributes.priority = _priority.unwrap().into();
-        _uattributes.ttl = _ttl.into();
-        _uattributes.permission_level = Some(_permission_level.into());
-        _uattributes.commstatus = Some(_commstatus.unwrap().into());
-        _uattributes.reqid = __reqid;
-        _uattributes.token = Some(_token.to_owned());
-        _uattributes.traceparent = Some(_traceparent.to_owned());
+       
+       
+       
 
         Ok(WrapperUAttribute(_uattributes))
     }
