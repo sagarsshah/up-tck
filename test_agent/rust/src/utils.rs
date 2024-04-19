@@ -116,7 +116,6 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             .get("resource")
             .and_then(|resource| resource.get("name"))
         {
-
             if let Some(name) = resource.as_str() {
                 _resource.name = name.to_owned();
             } else {
@@ -190,24 +189,20 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             .into();
         dbg!("_uattributes.type_: {:?}", _uattributes.type_.clone());
 
-        let _source = value
-            .get("source")
-            .and_then(|s| serde_json::from_value::<WrapperUUri>(s.clone()).ok())
-            .unwrap()
-            .0;
-
-        let _sink = value
-            .get("sink")
-            .and_then(|s| serde_json::from_value::<WrapperUUri>(s.clone()).ok())
-            .unwrap()
-            .0;
-
-        if _source != UUri::default() {
-            _uattributes.source = MessageField(Some(Box::new(_source)));
-        }
-        if _sink != UUri::default() {
-            _uattributes.sink = MessageField(Some(Box::new(_sink)));
-        }
+        if let Some(source_value) = value.get("source") {
+            if let Some(wrapper_uri) =
+                serde_json::from_value::<WrapperUUri>(source_value.clone()).ok()
+            {
+                _uattributes.source = MessageField(Some(Box::new(wrapper_uri.0)));
+            }
+        };
+        if let Some(sink_value) = value.get("sink") {
+            if let Some(wrapper_uri) =
+                serde_json::from_value::<WrapperUUri>(sink_value.clone()).ok()
+            {
+                _uattributes.sink = MessageField(Some(Box::new(wrapper_uri.0)));
+            }
+        };
 
         let mut ___id = UUID::new();
         if let Some(resource) = value.get("id").and_then(|resource| resource.get("lsb")) {
