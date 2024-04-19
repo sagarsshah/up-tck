@@ -24,7 +24,7 @@
 
 use log::error;
 use serde::{Deserialize, Deserializer};
-use serde_json::{Number, Value};
+use serde_json::Value;
 use up_rust::{
     Data, UAttributes, UAuthority, UCode, UEntity, UMessage, UMessageType, UPayload,
     UPayloadFormat, UPriority, UResource, UUri, UUID,
@@ -55,6 +55,18 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             .and_then(|name| name.as_str())
             .map(String::from);
 
+            if let Some(authority_value) = value.get("authority") {
+                if let Some(name_value) = authority_value.get("name") {
+                    if let Some(name_str) = name_value.as_str() {
+                        _authority.name = Some(String::from(name_str));
+                    } else {
+                        error!("Error: Name field is not a string in Authority")
+                    }
+                } 
+            } 
+            
+
+
         if let Some(_authority_number_ip) = value
             .get("authority")
             .and_then(|authority| authority.get("number"))
@@ -73,11 +85,22 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             ))
         };
 
-        if let Some(entity) = value.get("entity").and_then(|entity| entity.get("name")) {
-            _entity.name = entity.as_str().unwrap_or_default().to_string()
+   
+        if let Some(entity) = value
+            .get("entity")
+            .and_then(|entity| entity.get("name"))
+        {
+            if let Some(name) = entity.as_str() {
+                _entity.name = name.to_owned();
+            } else {
+           
+                error!("Error: Name field is not a string in entity");
+                
+            }
         };
 
-        if let Some(entity) = value.get("entity").and_then(|entity| entity.get("name")) {
+
+        if let Some(entity) = value.get("entity").and_then(|entity| entity.get("id")) {
             if let Ok(_entity_id_parsed) = entity
                 .clone()
                 .as_str()
@@ -103,9 +126,9 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             .get("entity")
             .and_then(|entity| entity.get("version_minor").and_then(|v| v.as_str()))
         {
-            // Attempt to parse the string to u32
+            
             _entity.version_minor = Some(entity.parse::<u32>().unwrap_or_else(|_| {
-                // Handle the error here, for now, just use 0 as default value
+            
                 0
             }))
         };
@@ -119,27 +142,47 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             if let Some(name) = resource.as_str() {
                 _resource.name = name.to_owned();
             } else {
-                // Handle the case where the "name" field is not a string
+           
                 error!("Error: Name field is not a string in resource");
-                // Optionally add fallback behavior here, such as providing a default name
+                
             }
         };
 
-        _resource.instance = value.get("resource").and_then(|resource| {
-            resource
-                .get("instance")
-                .and_then(|v| v.as_str().map(|s| s.to_owned()))
-        });
-        _resource.message = value.get("resource").and_then(|resource| {
-            resource
-                .get("message")
-                .and_then(|v| v.as_str().map(|s| s.to_owned()))
-        });
+        if let Some(resource_value) = value.get("resource") {
+            if let Some(instance_value) = resource_value.get("instance") {
+                if let Some(instance_str) = instance_value.as_str() {
+                    _resource.instance = Some(instance_str.to_owned());
+                } else {
+                    error!("Error: instance field is not a string in resource");
+                }
+            } 
+        } 
+        if let Some(resource_value) = value.get("resource") {
+            if let Some(message_value) = resource_value.get("message") {
+                if let Some(message_str) = message_value.as_str() {
+                    _resource.message = Some(message_str.to_owned());
+                } else {
+                    error!("Error: message field is not a string in resource");
+                }
+            } 
+        }
 
-        _resource.id = value
-            .get("resource")
-            .and_then(|resource| resource.get("id"))
-            .and_then(|id| id.as_str().and_then(|s| s.parse::<u32>().ok()));
+        if let Some(resource_value) = value.get("resource") {
+            if let Some(id_value) = resource_value.get("id") {
+                if let Some(id_str) = id_value.as_str() {
+                    if let Ok(parsed_id) = id_str.parse::<u32>() {
+                        _resource.id = Some(parsed_id);
+                    } else {
+                        error!("Error: id field parsing to u32");
+                    }
+                } else {
+                    error!("Error: id field is not string");
+                }
+            } 
+        } 
+
+
+    
 
         if !(_authority.get_name() == None && _authority.number == None) {
             dbg!("authority is not default");
@@ -161,32 +204,37 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         let value: Value = Deserialize::deserialize(deserializer)?;
         let mut _uattributes = UAttributes::new();
 
-        _uattributes.priority = value
-            .get("priority")
-            .and_then(|priority| {
-                priority.as_str().map(|s| {
-                    UPriority::from_str(s).unwrap_or_else(|| {
-                        error!("Deserialize: Something wrong with priority field");
-                        UPriority::UPRIORITY_UNSPECIFIED
-                    })
-                })
-            })
-            .unwrap()
-            .into();
+        if let Some(priority_value) = value.get("priority") {
+            if let Some(priority_str) = priority_value.as_str() {
+                _uattributes.priority = UPriority::from_str(priority_str).unwrap_or_else(|| {
+                    // Handle the case where the conversion fails
+                    error!("Deserialize: Something wrong with priority field");
+                    UPriority::UPRIORITY_UNSPECIFIED
+                }).into();
+            } else {
+                error!("pririty value is not string!")
+            }
+        } else {
+            error!("pririty value not available!")
+        }
+      
+
         dbg!("_uattributes.priority: {:?}", _uattributes.priority.clone());
 
-        _uattributes.type_ = value
-            .get("type")
-            .and_then(|type_| {
-                type_.as_str().map(|s| {
-                    UMessageType::from_str(s).unwrap_or_else(|| {
-                        error!("Deserialize: Something wrong with priority field");
-                        UMessageType::UMESSAGE_TYPE_UNSPECIFIED
-                    })
-                })
-            })
-            .unwrap()
-            .into();
+        if let Some(type_value) = value.get("type") {
+            if let Some(type_str) = type_value.as_str() {
+                _uattributes.type_ = UMessageType::from_str(type_str).unwrap_or_else(|| {
+                    // Handle the case where the conversion fails
+                    error!("Deserialize: Something wrong with type field");
+                    UMessageType::UMESSAGE_TYPE_UNSPECIFIED
+                }).into();
+            } else {
+                error!("type value is not string!")
+            }
+        } else {
+            error!("type value not available!")
+        }
+
         dbg!("_uattributes.type_: {:?}", _uattributes.type_.clone());
 
         if let Some(source_value) = value.get("source") {
@@ -249,30 +297,15 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             }
         };
 
-        let _commstatus = match value.get("commstatus") {
-            Some(_commstatus) => UCode::from_str(
-                _commstatus
-                    .as_str()
-                    .expect("Deserialize:something wrong with commstatus field"),
-            ),
-            None => Some(UCode::OUT_OF_RANGE),
-        };
+        if let Some(commstatus_value) = value.get("commstatus") {
+            if let Some(commstatus_str) = commstatus_value.as_str() {
+             _uattributes.commstatus   = Some(UCode::from_str(commstatus_str).unwrap().into());
+            } else {
+            error!("commstatus value is not string");
+            }
+        }
 
-        _uattributes.commstatus = Some(
-            value
-                .get("commstatus")
-                .and_then(|commstatus_| {
-                    commstatus_.as_str().map(|s| {
-                        UCode::from_str(s).unwrap_or_else(|| {
-                            error!("Deserialize: Something wrong with commstatus field");
-                            UCode::OUT_OF_RANGE
-                        })
-                    })
-                })
-                .unwrap()
-                .into(),
-        );
-        dbg!(
+     dbg!(
             " _uattributes.commstatus: {:?}",
             _uattributes.commstatus.clone()
         );
@@ -306,23 +339,17 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             if let Some(token_str) = _token.as_str() {
                 _uattributes.token = Some(token_str.to_owned());
             } else {
-                error!("Error: _token is not a string");
+                error!("Error: token is not a string");
             }
         };
-        if let Some(_traceparent) = value.get("token") {
+        if let Some(_traceparent) = value.get("traceparent") {
             if let Some(traceparent_str) = _traceparent.as_str() {
-                _uattributes.token = Some(traceparent_str.to_owned());
+                _uattributes.traceparent = Some(traceparent_str.to_owned());
             } else {
-                error!("Error: _token is not a string");
+                error!("Error: traceparent is not a string");
             }
         };
 
-        let _traceparent = match value.get("traceparent") {
-            Some(_traceparent) => _traceparent
-                .as_str()
-                .unwrap_or_else(|| panic!("Deserialize: something wrong with traceparen field")),
-            None => "Null",
-        };
         // special field //todo
         let _special_fields = SpecialFields::default();
 
