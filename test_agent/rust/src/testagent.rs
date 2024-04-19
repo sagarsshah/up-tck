@@ -166,6 +166,8 @@ impl SocketTestAgent {
                 continue;
             }
 
+            dbg!("RECEIVEDFROMTM");
+
             let recv_data_str: std::borrow::Cow<'_, str> =
                 String::from_utf8_lossy(&recv_data[..bytes_received]);
             let mut action_str = "";
@@ -180,8 +182,9 @@ impl SocketTestAgent {
                 .as_str()
                 .expect("issue in converting value to string");
 
+            dbg!(json_str_ref);
             let status = match json_str_ref {
-                SEND_COMMAND => {
+                constants::SEND_COMMAND => {
                     let wu_message: WrapperUMessage =
                         serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                     let u_message = wu_message.0;
@@ -189,7 +192,7 @@ impl SocketTestAgent {
                     self.utransport.send(u_message).await
                 }
 
-                REGISTER_LISTENER_COMMAND => {
+                constants::REGISTER_LISTENER_COMMAND => {
                     let cloned_listener = Arc::clone(&arc_self);
 
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
@@ -203,7 +206,7 @@ impl SocketTestAgent {
                         .await
                 }
 
-                UNREGISTER_LISTENER_COMMAND => {
+                constants::UNREGISTER_LISTENER_COMMAND => {
                     let cloned_listener = Arc::clone(&arc_self);
                     let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
                     let u_uuri = wu_uuri.0;
