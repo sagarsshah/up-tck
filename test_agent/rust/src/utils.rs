@@ -33,7 +33,13 @@ use up_rust::{
 use protobuf::{Enum, MessageField, SpecialFields};
 
 pub fn convert_json_to_jsonstring<T: serde::Serialize>(value: &T) -> String {
-    serde_json::to_string(value).expect("Failed to convert to JSON string")
+    if let Ok(json_string) = serde_json::to_string(value) {
+        json_string
+    } else {
+        // Handle the error
+        error!("Error: Failed to convert to JSON string");
+        "None".to_owned()
+    }
 }
 
 #[derive(Debug, Default)]
@@ -49,23 +55,16 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         let mut _entity = UEntity::new();
         let mut _resource = UResource::new();
         //update authority
-        _authority.name = value
+
+        if let Some(authority) = value
             .get("authority")
             .and_then(|authority| authority.get("name"))
-            .and_then(|name| name.as_str())
-            .map(String::from);
-
-            if let Some(authority_value) = value.get("authority") {
-                if let Some(name_value) = authority_value.get("name") {
-                    if let Some(name_str) = name_value.as_str() {
-                        _authority.name = Some(String::from(name_str));
-                    } else {
-                        error!("Error: Name field is not a string in Authority")
-                    }
-                } 
-            } 
-            
-
+            .and_then(|v| v.as_str())
+        {
+            _authority.name = Some(authority.to_owned());
+        } else {
+            error!("Error: Name field is not a string in authority");
+        };
 
         if let Some(_authority_number_ip) = value
             .get("authority")
@@ -85,52 +84,50 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             ))
         };
 
-   
         if let Some(entity) = value
             .get("entity")
             .and_then(|entity| entity.get("name"))
+            .and_then(|v| v.as_str())
         {
-            if let Some(name) = entity.as_str() {
-                _entity.name = name.to_owned();
-            } else {
-           
-                error!("Error: Name field is not a string in entity");
-                
-            }
+            _entity.name = entity.to_owned();
+        } else {
+            error!("Error: Name field is not a string in entity");
         };
 
-
-        if let Some(entity) = value.get("entity").and_then(|entity| entity.get("id")) {
-            if let Ok(_entity_id_parsed) = entity
-                .clone()
-                .as_str()
-                .expect("not a string")
-                .parse::<u32>()
-            {
-                _entity.id = Some(_entity_id_parsed);
+        if let Some(entity) = value
+            .get("entity")
+            .and_then(|entity| entity.get("id"))
+            .and_then(|v| v.as_str())
+        {
+            if let Ok(entity_id_parsed) = entity.parse::<u32>() {
+                _entity.id = Some(entity_id_parsed);
+            } else {
+                error!("Error: Not able to parse entity id");
             }
+        } else {
+            error!("Error: entity id filed is not a string");
         };
 
         if let Some(entity) = value
             .get("entity")
             .and_then(|entity| entity.get("version_major").and_then(|v| v.as_str()))
         {
-            // Attempt to parse the string to u32
-            _entity.version_major = Some(entity.parse::<u32>().unwrap_or_else(|_| {
-                // Handle the error here, for now, just use 0 as default value
-                0
-            }))
+            if let Ok(version_major_parsed) = entity.parse::<u32>() {
+                _entity.version_major = Some(version_major_parsed);
+            }
+        } else {
+            error!("Error: entity version major is not a string");
         };
 
         if let Some(entity) = value
             .get("entity")
             .and_then(|entity| entity.get("version_minor").and_then(|v| v.as_str()))
         {
-            
-            _entity.version_minor = Some(entity.parse::<u32>().unwrap_or_else(|_| {
-            
-                0
-            }))
+            if let Ok(version_minor_parsed) = entity.parse::<u32>() {
+                _entity.version_minor = Some(version_minor_parsed);
+            }
+        } else {
+            error!("Error: entity version minor is not a string");
         };
 
         _entity.special_fields = SpecialFields::default();
@@ -138,54 +135,49 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         if let Some(resource) = value
             .get("resource")
             .and_then(|resource| resource.get("name"))
+            .and_then(|v| v.as_str())
         {
-            if let Some(name) = resource.as_str() {
-                _resource.name = name.to_owned();
-            } else {
-           
-                error!("Error: Name field is not a string in resource");
-                
-            }
+            _resource.name = resource.to_owned();
+        } else {
+            error!("Error: Name field is not a string in resource");
         };
 
-        if let Some(resource_value) = value.get("resource") {
-            if let Some(instance_value) = resource_value.get("instance") {
-                if let Some(instance_str) = instance_value.as_str() {
-                    _resource.instance = Some(instance_str.to_owned());
-                } else {
-                    error!("Error: instance field is not a string in resource");
-                }
-            } 
-        } 
-        if let Some(resource_value) = value.get("resource") {
-            if let Some(message_value) = resource_value.get("message") {
-                if let Some(message_str) = message_value.as_str() {
-                    _resource.message = Some(message_str.to_owned());
-                } else {
-                    error!("Error: message field is not a string in resource");
-                }
-            } 
+        if let Some(resource) = value
+            .get("resource")
+            .and_then(|resource| resource.get("instance"))
+            .and_then(|v| v.as_str())
+        {
+            _resource.instance = Some(resource.to_owned());
+        } else {
+            error!("Error: instance field is not a string in resource");
         }
 
-        if let Some(resource_value) = value.get("resource") {
-            if let Some(id_value) = resource_value.get("id") {
-                if let Some(id_str) = id_value.as_str() {
-                    if let Ok(parsed_id) = id_str.parse::<u32>() {
-                        _resource.id = Some(parsed_id);
-                    } else {
-                        error!("Error: id field parsing to u32");
-                    }
-                } else {
-                    error!("Error: id field is not string");
-                }
-            } 
-        } 
+        if let Some(resource) = value
+            .get("resource")
+            .and_then(|resource| resource.get("message"))
+            .and_then(|v| v.as_str())
+        {
+            _resource.message = Some(resource.to_owned());
+        } else {
+            error!("Error: message field is not a string in resource");
+        };
 
-
-    
+        if let Some(resource) = value
+            .get("resource")
+            .and_then(|resource| resource.get("id"))
+            .and_then(|v| v.as_str())
+        {
+            if let Ok(parsed_id) = resource.parse::<u32>() {
+                _resource.id = Some(parsed_id);
+            } else {
+                error!("Error: id field parsing to u32");
+            }
+        } else {
+            error!("Error: id field is not string");
+        };
 
         if !(_authority.get_name() == None && _authority.number == None) {
-            dbg!("authority is not default");
+            dbg!(" authority is not default");
             _uuri.authority = MessageField(Some(Box::new(_authority)));
         }
         _uuri.entity = MessageField(Some(Box::new(_entity)));
@@ -204,35 +196,30 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         let value: Value = Deserialize::deserialize(deserializer)?;
         let mut _uattributes = UAttributes::new();
 
-        if let Some(priority_value) = value.get("priority") {
-            if let Some(priority_str) = priority_value.as_str() {
-                _uattributes.priority = UPriority::from_str(priority_str).unwrap_or_else(|| {
+        if let Some(priority_value) = value.get("priority").and_then(|v| v.as_str()) {
+            _uattributes.priority = UPriority::from_str(priority_value)
+                .unwrap_or_else(|| {
                     // Handle the case where the conversion fails
-                    error!("Deserialize: Something wrong with priority field");
+                    error!("Error:: Something wrong with priority field");
                     UPriority::UPRIORITY_UNSPECIFIED
-                }).into();
-            } else {
-                error!("pririty value is not string!")
-            }
+                })
+                .into();
         } else {
-            error!("pririty value not available!")
+            error!("Error:pririty value is not string!")
         }
-      
 
         dbg!("_uattributes.priority: {:?}", _uattributes.priority.clone());
 
-        if let Some(type_value) = value.get("type") {
-            if let Some(type_str) = type_value.as_str() {
-                _uattributes.type_ = UMessageType::from_str(type_str).unwrap_or_else(|| {
+        if let Some(type_value) = value.get("type").and_then(|v| v.as_str()) {
+            _uattributes.type_ = UMessageType::from_str(type_value)
+                .unwrap_or_else(|| {
                     // Handle the case where the conversion fails
-                    error!("Deserialize: Something wrong with type field");
+                    error!("Error: Something wrong with type field");
                     UMessageType::UMESSAGE_TYPE_UNSPECIFIED
-                }).into();
-            } else {
-                error!("type value is not string!")
-            }
+                })
+                .into();
         } else {
-            error!("type value not available!")
+            error!("Error: type value is not string!")
         }
 
         dbg!("_uattributes.type_: {:?}", _uattributes.type_.clone());
@@ -253,26 +240,29 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         };
 
         let mut ___id = UUID::new();
-        if let Some(resource) = value.get("id").and_then(|resource| resource.get("lsb")) {
-            if let Some(id_str) = resource.as_str() {
-                if let Ok(parsed_id) = id_str.parse::<u64>() {
-                    ___id.lsb = parsed_id;
-                } else {
-                    error!("Error: Failed to parse _id_lsb as u64");
-                }
+        if let Some(resource) = value
+            .get("id")
+            .and_then(|resource| resource.get("lsb"))
+            .and_then(|v| v.as_str())
+        {
+            if let Ok(parsed_id) = resource.parse::<u64>() {
+                ___id.lsb = parsed_id;
             } else {
-                error!("Error: _id_lsb is not a string");
+                error!("Error: Failed to parse _id_lsb as u64");
             }
+        } else {
+            error!("Error: _id_lsb is not a string");
         };
-        if let Some(resource) = value.get("id").and_then(|resource| resource.get("msb")) {
-            if let Some(id_str) = resource.as_str() {
-                if let Ok(parsed_id) = id_str.parse::<u64>() {
-                    ___id.msb = parsed_id;
-                } else {
-                    error!("Error: Failed to parse _id_msb as u64");
-                }
+
+        if let Some(resource) = value
+            .get("id")
+            .and_then(|resource| resource.get("msb"))
+            .and_then(|v| v.as_str())
+        {
+            if let Ok(parsed_id) = resource.parse::<u64>() {
+                ___id.msb = parsed_id;
             } else {
-                error!("Error: _id_msb is not a string");
+                error!("Error: Failed to parse _id_msb as u64");
             }
         };
 
@@ -297,42 +287,49 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             }
         };
 
-        if let Some(commstatus_value) = value.get("commstatus") {
-            if let Some(commstatus_str) = commstatus_value.as_str() {
-             _uattributes.commstatus   = Some(UCode::from_str(commstatus_str).unwrap().into());
-            } else {
+        if let Some(commstatus_value) = value
+            .get("commstatus")
+            .and_then(|commstatus_value| commstatus_value.as_str())
+        {
+            _uattributes.commstatus = Some(UCode::from_str(commstatus_value).unwrap().into());
+        } else {
             error!("commstatus value is not string");
-            }
-        }
+        };
 
-     dbg!(
+        dbg!(
             " _uattributes.commstatus: {:?}",
             _uattributes.commstatus.clone()
         );
 
         let mut ___reqid = UUID::new();
-        if let Some(resource) = value.get("reqid").and_then(|resource| resource.get("lsb")) {
-            if let Some(id_str) = resource.as_str() {
-                if let Ok(parsed_id) = id_str.parse::<u64>() {
-                    ___reqid.lsb = parsed_id;
-                } else {
-                    eprintln!("Error: Failed to parse _id_lsb as u64");
-                }
+        if let Some(resource) = value
+            .get("reqid")
+            .and_then(|resource| resource.get("lsb"))
+            .and_then(|resource| resource.as_str())
+        {
+            if let Ok(parsed_id) = resource.parse::<u64>() {
+                ___reqid.lsb = parsed_id;
             } else {
-                eprintln!("Error: _id_lsb is not a string");
+                eprintln!("Error: Failed to parse _id_lsb as u64");
             }
+        } else {
+            eprintln!("Error: _id_lsb is not a string");
         };
-        if let Some(resource) = value.get("reqid").and_then(|resource| resource.get("msb")) {
-            if let Some(id_str) = resource.as_str() {
-                if let Ok(parsed_id) = id_str.parse::<u64>() {
-                    ___reqid.msb = parsed_id;
-                } else {
-                    eprintln!("Error: Failed to parse _id_msb as u64");
-                }
+
+        if let Some(resource) = value
+            .get("reqid")
+            .and_then(|resource| resource.get("msb"))
+            .and_then(|resource| resource.as_str())
+        {
+            if let Ok(parsed_id) = resource.parse::<u64>() {
+                ___reqid.msb = parsed_id;
             } else {
-                eprintln!("Error: _id_msb is not a string");
+                eprintln!("Error: Failed to parse _id_msb as u64");
             }
+        } else {
+            eprintln!("Error: _id_msb is not a string");
         };
+
         _uattributes.reqid = MessageField(Some(Box::new(___reqid)));
 
         if let Some(_token) = value.get("token") {
@@ -342,12 +339,14 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
                 error!("Error: token is not a string");
             }
         };
-        if let Some(_traceparent) = value.get("traceparent") {
-            if let Some(traceparent_str) = _traceparent.as_str() {
-                _uattributes.traceparent = Some(traceparent_str.to_owned());
-            } else {
-                error!("Error: traceparent is not a string");
-            }
+        if let Some(_traceparent) = value
+            .get("traceparent")
+            .and_then(|_traceparent| _traceparent.as_str())
+        {
+            //if let Some(traceparent_str) = _traceparent.as_str() {
+            _uattributes.traceparent = Some(_traceparent.to_owned());
+        } else {
+            error!("Error: traceparent is not a string");
         };
 
         // special field //todo
@@ -368,37 +367,38 @@ impl<'de> Deserialize<'de> for WrapperUPayload {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-        let _format = match value.get("format") {
-            Some(_format) => UPayloadFormat::from_str(
-                _format
-                    .as_str()
-                    .expect("Deserialize:something wrong with _type field"),
-            ),
-            None => Some(UPayloadFormat::UPAYLOAD_FORMAT_UNSPECIFIED),
+        let mut upayload = UPayload::new();
+
+        if let Some(format_value) = value
+            .get("format")
+            .and_then(|format_value| format_value.as_str())
+        {
+            upayload.format = UPayloadFormat::from_str(format_value).unwrap().into();
+        } else {
+            error!("Error: value of format is not a string");
+            upayload.format = UPayloadFormat::UPAYLOAD_FORMAT_UNSPECIFIED.into();
         };
 
-        let _length = match value.get("length") {
-            Some(_length) => _length
-                .as_str()
-                .unwrap_or_else(|| panic!("Deserialize: something wrong with commstatus field"))
-                .parse::<i32>()
-                .expect("commstatus parsing error"),
-            None => 0,
+        if let Some(length_value) = value
+            .get("length")
+            .and_then(|length_value| length_value.as_str())
+        {
+            if let Ok(parsed_length_value) = length_value.parse::<i32>() {
+                upayload.length = Some(parsed_length_value.into());
+            } else {
+                error!("Error: Failed to parse permission_level as u32");
+            }
         };
 
-        let _data = match value.get("value") {
-            Some(_data) => Data::Value(
-                serde_json::to_vec(_data).expect("error in converting data value to vector"),
-            ),
-            None => Data::Reference(0),
-        };
+        if let Some(data_value) = value.get("value") {
+            if let Ok(data_vec) = serde_json::to_vec(data_value) {
+                upayload.data = Some(Data::Value(data_vec));
+            } else {
+                upayload.data = Some(Data::Reference(0));
+            }
+        }
 
-        Ok(WrapperUPayload(UPayload {
-            length: Some(_length),
-            format: _format.unwrap().into(),
-            data: _data.into(),
-            special_fields: Default::default(),
-        }))
+        Ok(WrapperUPayload(upayload))
     }
 }
 
@@ -462,20 +462,3 @@ mod tests {
         assert_eq!(result, r#"{"key":"value"}"#);
     }
 }
-
-// use prost::Message; // Import the prost crate for protobuf message handling
-use std::{default, fmt::Debug};
-
-// Function to serialize any protobuf message to JSON string
-// fn protobuf_to_json<M: Message>(message: &M) -> Result<String, serde_json::Error> {
-//     // Serialize the protobuf message to bytes
-//     let bytes = message.encode_to_vec();
-
-//     // Deserialize the bytes into a JSON value
-//     let json_value = serde_json::from_slice(&bytes)?;
-
-//     // Serialize the JSON value into a JSON string
-//     let json_string = serde_json::to_string(&json_value)?;
-
-//     Ok(json_string)
-// }
