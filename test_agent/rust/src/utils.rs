@@ -56,19 +56,19 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         let mut _resource = UResource::new();
         //update authority
 
-        if let Some(authority) = value
-            .get("authority")
-            .and_then(|authority| authority.get("name"))
-            .and_then(|v| v.as_str())
+        if let Some(authority_value) = value
+            .get("authority_value")
+            .and_then(|authority_value| authority_value.get("name"))
+            .and_then(|authority_value| authority_value.as_str())
         {
-            _authority.name = Some(authority.to_owned());
+            _authority.name = Some(authority_value.to_owned());
         } else {
             error!("Error: Name field is not a string in authority");
         };
 
         if let Some(_authority_number_ip) = value
             .get("authority")
-            .and_then(|authority| authority.get("number"))
+            .and_then(|authority_value| authority_value.get("number"))
             .and_then(|number| number.get("ip"))
         {
             _authority.number = Some(up_rust::Number::Ip(
@@ -76,7 +76,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             ))
         } else if let Some(_authority_number_id) = value
             .get("authority")
-            .and_then(|authority| authority.get("number"))
+            .and_then(|authority_value| authority_value.get("number"))
             .and_then(|number| number.get("id"))
         {
             _authority.number = Some(up_rust::Number::Id(
@@ -84,22 +84,22 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             ))
         };
 
-        if let Some(entity) = value
+        if let Some(entity_value) = value
             .get("entity")
-            .and_then(|entity| entity.get("name"))
-            .and_then(|v| v.as_str())
+            .and_then(|entity_value| entity_value.get("name"))
+            .and_then(|entity_value| entity_value.as_str())
         {
-            _entity.name = entity.to_owned();
+            _entity.name = entity_value.to_owned();
         } else {
             error!("Error: Name field is not a string in entity");
         };
 
-        if let Some(entity) = value
+        if let Some(entity_value) = value
             .get("entity")
-            .and_then(|entity| entity.get("id"))
-            .and_then(|v| v.as_str())
+            .and_then(|entity_value| entity_value.get("id"))
+            .and_then(|entity_value| entity_value.as_str())
         {
-            if let Ok(entity_id_parsed) = entity.parse::<u32>() {
+            if let Ok(entity_id_parsed) = entity_value.parse::<u32>() {
                 _entity.id = Some(entity_id_parsed);
             } else {
                 error!("Error: Not able to parse entity id");
@@ -108,22 +108,24 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             error!("Error: entity id filed is not a string");
         };
 
-        if let Some(entity) = value
+        if let Some(entity_value) = value
             .get("entity")
-            .and_then(|entity| entity.get("version_major").and_then(|v| v.as_str()))
+            .and_then(|entity_value| entity_value.get("version_major")
+            .and_then(|entity_value| entity_value.as_str()))
         {
-            if let Ok(version_major_parsed) = entity.parse::<u32>() {
+            if let Ok(version_major_parsed) = entity_value.parse::<u32>() {
                 _entity.version_major = Some(version_major_parsed);
             }
         } else {
-            error!("Error: entity version major is not a string");
+            error!("Error: entity_value version major is not a string");
         };
 
-        if let Some(entity) = value
+        if let Some(entity_value) = value
             .get("entity")
-            .and_then(|entity| entity.get("version_minor").and_then(|v| v.as_str()))
+            .and_then(|entity_value| entity_value.get("version_minor")
+            .and_then(|entity_value| entity_value.as_str()))
         {
-            if let Ok(version_minor_parsed) = entity.parse::<u32>() {
+            if let Ok(version_minor_parsed) = entity_value.parse::<u32>() {
                 _entity.version_minor = Some(version_minor_parsed);
             }
         } else {
@@ -132,42 +134,42 @@ impl<'de> Deserialize<'de> for WrapperUUri {
 
         _entity.special_fields = SpecialFields::default();
 
-        if let Some(resource) = value
+        if let Some(resource_value) = value
             .get("resource")
-            .and_then(|resource| resource.get("name"))
-            .and_then(|v| v.as_str())
+            .and_then(|resource_value| resource_value.get("name"))
+            .and_then(|resource_value| resource_value.as_str())
         {
-            _resource.name = resource.to_owned();
+            _resource.name = resource_value.to_owned();
         } else {
             error!("Error: Name field is not a string in resource");
         };
 
-        if let Some(resource) = value
+        if let Some(resource_value) = value
             .get("resource")
-            .and_then(|resource| resource.get("instance"))
-            .and_then(|v| v.as_str())
+            .and_then(|resource_value| resource_value.get("instance"))
+            .and_then(|resource_value| resource_value.as_str())
         {
-            _resource.instance = Some(resource.to_owned());
+            _resource.instance = Some(resource_value.to_owned());
         } else {
             error!("Error: instance field is not a string in resource");
         }
 
-        if let Some(resource) = value
+        if let Some(resource_value) = value
             .get("resource")
-            .and_then(|resource| resource.get("message"))
-            .and_then(|v| v.as_str())
+            .and_then(|resource_value| resource_value.get("message"))
+            .and_then(|resource_value| resource_value.as_str())
         {
-            _resource.message = Some(resource.to_owned());
+            _resource.message = Some(resource_value.to_owned());
         } else {
-            error!("Error: message field is not a string in resource");
+            error!("Error: message field is not a string in resource_value");
         };
 
-        if let Some(resource) = value
+        if let Some(resource_value) = value
             .get("resource")
-            .and_then(|resource| resource.get("id"))
-            .and_then(|v| v.as_str())
+            .and_then(|resource_value| resource_value.get("id"))
+            .and_then(|resource_value| resource_value.as_str())
         {
-            if let Ok(parsed_id) = resource.parse::<u32>() {
+            if let Ok(parsed_id) = resource_value.parse::<u32>() {
                 _resource.id = Some(parsed_id);
             } else {
                 error!("Error: id field parsing to u32");
