@@ -21,3 +21,5 @@ MANIFEST
 **/jar_files/**
 *.jar
 **/.DS_Store
+/target
+**/utransport-socket/*
