@@ -312,11 +312,9 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             if let Ok(parsed_id) = resource.parse::<u64>() {
                 ___reqid.lsb = parsed_id;
             } else {
-                eprintln!("Error: Failed to parse _id_lsb as u64");
+                error!("Error: Failed to parse _reqid_lsb as u64");
             }
-        } else {
-            eprintln!("Error: _id_lsb is not a string");
-        };
+        } ;
 
         if let Some(resource) = value
             .get("reqid")
@@ -326,11 +324,9 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             if let Ok(parsed_id) = resource.parse::<u64>() {
                 ___reqid.msb = parsed_id;
             } else {
-                eprintln!("Error: Failed to parse _id_msb as u64");
+                dbg!("Error: Failed to parse _reqid_msb as u64");
             }
-        } else {
-            eprintln!("Error: _id_msb is not a string");
-        };
+        } ;
 
         _uattributes.reqid = MessageField(Some(Box::new(___reqid)));
 

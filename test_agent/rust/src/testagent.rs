@@ -54,7 +54,7 @@ pub struct SocketTestAgent {
     utransport: UTransportSocket,
     clientsocket: Arc<Mutex<TcpStreamSync>>,
     clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
-    //  listener_map: Vec<String>,
+    
 }
 
 #[async_trait]
@@ -75,7 +75,7 @@ impl UListener for SocketTestAgent {
                 }
             }
             None => {
-                println!("No data available");
+                dbg!("No data available");
                 "none".into()
             }
         };
@@ -106,6 +106,7 @@ impl UListener for SocketTestAgent {
         //<SocketTestAgent as Clone>::clone(&self)
         //todo: revisit this and check:Better pattern might be to have the UListener be impled on a different struct
         //e.g. SocketTestListener that then holds an Arc<Mutex<SocketTestAgent>> to be able to call send_to_tm() on that instead.
+        dbg!("sending received data to tm....");
         self.clone().send_to_tm(json_message).await;
     }
 
@@ -114,20 +115,6 @@ impl UListener for SocketTestAgent {
     }
 }
 
-// impl Clone for SocketTestAgent {
-//     fn clone(&self) -> Self {
-//         SocketTestAgent {
-//             utransport: self.utransport.clone(),
-//             clientsocket: self.clientsocket.clone(),
-//             clientsocket_to_tm:self.clientsocket_to_tm.clone(),
-//             listener_map: self.listener_map.clone(),
-//         }
-//     }
-
-//     fn clone_from(&mut self, source: &Self) {
-//         *self = source.clone()
-//     }
-// }
 
 impl SocketTestAgent {
     pub fn new(
@@ -180,27 +167,16 @@ impl SocketTestAgent {
                 String::from_utf8_lossy(&recv_data[..bytes_received]);
             let mut action_str = "";
             let cleaned_json_string = sanitize_input_string(&recv_data_str).replace("BYTES:", "");
-          
-            let json_msg: Value = serde_json::from_str(&cleaned_json_string.to_string())
-    .unwrap_or_else(|e| {
-        error!("Issue in parsing JSON: {}",e);
-    }).into();
-       
+            let json_msg: Value =
+            serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
+   
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
             let test_id = json_msg["test_id"].clone();
 
             let json_str_ref = action
-            .as_str()
-            .unwrap_or_else(|| {
-                error!("Issue in converting value to string: ");
-                "None"
-            });
-
-
-            // let json_str_ref = action
-            //     .as_str()
-            //     .expect("issue in converting value to string");
+                .as_str()
+                .expect("issue in converting value to string");
 
             dbg!(json_str_ref);
             let status = match json_str_ref {
