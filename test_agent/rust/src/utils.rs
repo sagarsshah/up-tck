@@ -50,10 +50,10 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-        let mut _authority = UAuthority::new();
-        let mut _uuri: UUri = UUri::new();
-        let mut _entity = UEntity::new();
-        let mut _resource = UResource::new();
+        let mut authority = UAuthority::new();
+        let mut uuri: UUri = UUri::new();
+        let mut entity = UEntity::new();
+        let mut resource = UResource::new();
         //update authority
 
         if let Some(authority_value) = value
@@ -61,27 +61,27 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             .and_then(|authority_value| authority_value.get("name"))
             .and_then(|authority_value| authority_value.as_str())
         {
-            _authority.name = Some(authority_value.to_owned());
+            authority.name = Some(authority_value.to_owned());
         } else {
             error!("Error: Name field is not a string in authority");
         };
 
-        if let Some(_authority_number_ip) = value
+        if let Some(authority_number_ip) = value
             .get("authority")
             .and_then(|authority_value| authority_value.get("number"))
             .and_then(|number| number.get("ip"))
         {
-            _authority.number = Some(up_rust::Number::Ip(
-                _authority_number_ip.to_string().as_bytes().to_vec(),
-            ))
-        } else if let Some(_authority_number_id) = value
+            authority.number = Some(up_rust::Number::Ip(
+                authority_number_ip.to_string().as_bytes().to_vec(),
+            ));
+        } else if let Some(authority_number_id) = value
             .get("authority")
             .and_then(|authority_value| authority_value.get("number"))
             .and_then(|number| number.get("id"))
         {
-            _authority.number = Some(up_rust::Number::Id(
-                _authority_number_id.to_string().as_bytes().to_vec(),
-            ))
+            authority.number = Some(up_rust::Number::Id(
+                authority_number_id.to_string().as_bytes().to_vec(),
+            ));
         };
 
         if let Some(entity_value) = value
@@ -89,7 +89,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             .and_then(|entity_value| entity_value.get("name"))
             .and_then(|entity_value| entity_value.as_str())
         {
-            _entity.name = entity_value.to_owned();
+            entity.name = entity_value.to_owned();
         } else {
             error!("Error: Name field is not a string in entity");
         };
@@ -100,7 +100,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             .and_then(|entity_value| entity_value.as_str())
         {
             if let Ok(entity_id_parsed) = entity_value.parse::<u32>() {
-                _entity.id = Some(entity_id_parsed);
+                entity.id = Some(entity_id_parsed);
             } else {
                 error!("Error: Not able to parse entity id");
             }
@@ -114,7 +114,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
                 .and_then(|entity_value| entity_value.as_str())
         }) {
             if let Ok(version_major_parsed) = entity_value.parse::<u32>() {
-                _entity.version_major = Some(version_major_parsed);
+                entity.version_major = Some(version_major_parsed);
             }
         } else {
             error!("Error: entity_value version major is not a string");
@@ -126,20 +126,20 @@ impl<'de> Deserialize<'de> for WrapperUUri {
                 .and_then(|entity_value| entity_value.as_str())
         }) {
             if let Ok(version_minor_parsed) = entity_value.parse::<u32>() {
-                _entity.version_minor = Some(version_minor_parsed);
+                entity.version_minor = Some(version_minor_parsed);
             }
         } else {
             error!("Error: entity version minor is not a string");
         };
 
-        _entity.special_fields = SpecialFields::default();
+        entity.special_fields = SpecialFields::default();
 
         if let Some(resource_value) = value
             .get("resource")
             .and_then(|resource_value| resource_value.get("name"))
             .and_then(|resource_value| resource_value.as_str())
         {
-            _resource.name = resource_value.to_owned();
+            resource.name = resource_value.to_owned();
         } else {
             error!("Error: Name field is not a string in resource");
         };
@@ -149,7 +149,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             .and_then(|resource_value| resource_value.get("instance"))
             .and_then(|resource_value| resource_value.as_str())
         {
-            _resource.instance = Some(resource_value.to_owned());
+            resource.instance = Some(resource_value.to_owned());
         } else {
             error!("Error: instance field is not a string in resource");
         }
@@ -159,7 +159,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             .and_then(|resource_value| resource_value.get("message"))
             .and_then(|resource_value| resource_value.as_str())
         {
-            _resource.message = Some(resource_value.to_owned());
+            resource.message = Some(resource_value.to_owned());
         } else {
             error!("Error: message field is not a string in resource_value");
         };
@@ -170,7 +170,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             .and_then(|resource_value| resource_value.as_str())
         {
             if let Ok(parsed_id) = resource_value.parse::<u32>() {
-                _resource.id = Some(parsed_id);
+                resource.id = Some(parsed_id);
             } else {
                 error!("Error: id field parsing to u32");
             }
@@ -178,14 +178,14 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             error!("Error: id field is not string");
         };
 
-        if !(_authority.get_name() == None && _authority.number == None) {
+        if !(authority.get_name().is_none() && authority.number.is_none()) {
             dbg!(" authority is not default");
-            _uuri.authority = MessageField(Some(Box::new(_authority)));
+            uuri.authority = MessageField(Some(Box::new(authority)));
         }
-        _uuri.entity = MessageField(Some(Box::new(_entity)));
-        _uuri.resource = MessageField(Some(Box::new(_resource)));
+        uuri.entity = MessageField(Some(Box::new(entity)));
+        uuri.resource = MessageField(Some(Box::new(resource)));
 
-        Ok(WrapperUUri(_uuri))
+        Ok(WrapperUUri(uuri))
     }
 }
 #[derive(Default)]
@@ -196,10 +196,10 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
-        let mut _uattributes = UAttributes::new();
+        let mut uattributes = UAttributes::new();
 
         if let Some(priority_value) = value.get("priority").and_then(|v| v.as_str()) {
-            _uattributes.priority = UPriority::from_str(priority_value)
+            uattributes.priority = UPriority::from_str(priority_value)
                 .unwrap_or_else(|| {
                     // Handle the case where the conversion fails
                     error!("Error:: Something wrong with priority field");
@@ -207,13 +207,13 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
                 })
                 .into();
         } else {
-            error!("Error:pririty value is not string!")
+            error!("Error:pririty value is not string!");
         }
 
-        dbg!("_uattributes.priority: {:?}", _uattributes.priority.clone());
+        dbg!("uattributes.priority: {:?}", uattributes.priority);
 
         if let Some(type_value) = value.get("type").and_then(|v| v.as_str()) {
-            _uattributes.type_ = UMessageType::from_str(type_value)
+            uattributes.type_ = UMessageType::from_str(type_value)
                 .unwrap_or_else(|| {
                     // Handle the case where the conversion fails
                     error!("Error: Something wrong with type field");
@@ -221,23 +221,21 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
                 })
                 .into();
         } else {
-            error!("Error: type value is not string!")
+            error!("Error: type value is not string!");
         }
 
-        dbg!("_uattributes.type_: {:?}", _uattributes.type_.clone());
+        dbg!("uattributes.type_: {:?}", uattributes.type_);
 
         if let Some(source_value) = value.get("source") {
-            if let Some(wrapper_uri) =
-                serde_json::from_value::<WrapperUUri>(source_value.clone()).ok()
+            if let Ok(wrapper_uri) = serde_json::from_value::<WrapperUUri>(source_value.clone())
             {
-                _uattributes.source = MessageField(Some(Box::new(wrapper_uri.0)));
+                uattributes.source = MessageField(Some(Box::new(wrapper_uri.0)));
             }
         };
         if let Some(sink_value) = value.get("sink") {
-            if let Some(wrapper_uri) =
-                serde_json::from_value::<WrapperUUri>(sink_value.clone()).ok()
+            if let Ok(wrapper_uri) = serde_json::from_value::<WrapperUUri>(sink_value.clone())
             {
-                _uattributes.sink = MessageField(Some(Box::new(wrapper_uri.0)));
+                uattributes.sink = MessageField(Some(Box::new(wrapper_uri.0)));
             }
         };
 
@@ -268,22 +266,22 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             }
         };
 
-        _uattributes.id = MessageField(Some(Box::new(___id)));
+        uattributes.id = MessageField(Some(Box::new(___id)));
 
-        if let Some(_ttl) = value.get("ttl").and_then(|ttl| ttl.as_str()) {
-            if let Ok(parsed_ttl) = _ttl.parse::<u32>() {
-                _uattributes.ttl = parsed_ttl.into();
+        if let Some(ttl) = value.get("ttl").and_then(|ttl| ttl.as_str()) {
+            if let Ok(parsed_ttl) = ttl.parse::<u32>() {
+                uattributes.ttl = parsed_ttl.into();
             } else {
                 error!("Error: Failed to parse _ttl as u32");
             }
         };
 
-        if let Some(_permission_level) = value
+        if let Some(permission_level) = value
             .get("permission_level")
             .and_then(|permission_level| permission_level.as_str())
         {
-            if let Ok(parsed_permission_level) = _permission_level.parse::<u32>() {
-                _uattributes.permission_level = Some(parsed_permission_level.into());
+            if let Ok(parsed_permission_level) = permission_level.parse::<u32>() {
+                uattributes.permission_level = Some(parsed_permission_level);
             } else {
                 error!("Error: Failed to parse permission_level as u32");
             }
@@ -293,14 +291,14 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             .get("commstatus")
             .and_then(|commstatus_value| commstatus_value.as_str())
         {
-            _uattributes.commstatus = Some(UCode::from_str(commstatus_value).unwrap().into());
+            uattributes.commstatus = Some(UCode::from_str(commstatus_value).unwrap().into());
         } else {
             error!("commstatus value is not string");
         };
 
         dbg!(
-            " _uattributes.commstatus: {:?}",
-            _uattributes.commstatus.clone()
+            " uattributes.commstatus: {:?}",
+            uattributes.commstatus
         );
 
         let mut ___reqid = UUID::new();
@@ -328,11 +326,11 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             }
         };
 
-        _uattributes.reqid = MessageField(Some(Box::new(___reqid)));
+        uattributes.reqid = MessageField(Some(Box::new(___reqid)));
 
-        if let Some(_token) = value.get("token") {
-            if let Some(token_str) = _token.as_str() {
-                _uattributes.token = Some(token_str.to_owned());
+        if let Some(token) = value.get("token") {
+            if let Some(token_str) = token.as_str() {
+                uattributes.token = Some(token_str.to_owned());
             } else {
                 error!("Error: token is not a string");
             }
@@ -342,19 +340,19 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             .and_then(|_traceparent| _traceparent.as_str())
         {
             //if let Some(traceparent_str) = _traceparent.as_str() {
-            _uattributes.traceparent = Some(_traceparent.to_owned());
+            uattributes.traceparent = Some(_traceparent.to_owned());
         } else {
             error!("Error: traceparent is not a string");
         };
 
         // special field //todo
-        let _special_fields = SpecialFields::default();
+        let special_fields = SpecialFields::default();
 
-        if _special_fields.ne(&SpecialFields::default()) {
-            _uattributes.special_fields = _special_fields;
+        if special_fields.ne(&SpecialFields::default()) {
+            uattributes.special_fields = special_fields;
         }
 
-        Ok(WrapperUAttribute(_uattributes))
+        Ok(WrapperUAttribute(uattributes))
     }
 }
 #[derive(Default)]
@@ -382,7 +380,7 @@ impl<'de> Deserialize<'de> for WrapperUPayload {
             .and_then(|length_value| length_value.as_str())
         {
             if let Ok(parsed_length_value) = length_value.parse::<i32>() {
-                upayload.length = Some(parsed_length_value.into());
+                upayload.length = Some(parsed_length_value);
             } else {
                 error!("Error: Failed to parse permission_level as u32");
             }

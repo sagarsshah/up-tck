@@ -37,7 +37,7 @@ use std::{
 use serde::Serialize;
 
 use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
-use crate::*;
+use crate::{TcpStreamSync, UTransportSocket, constants, utils};
 
 use self::utils::sanitize_input_string;
 
@@ -79,7 +79,7 @@ impl UListener for SocketTestAgent {
         };
 
         let mut value: HashMap<String, String> = HashMap::new();
-        value.insert("value".into(), data_payload.into());
+        value.insert("value".into(), data_payload);
         let Ok(value_str) = serde_json::to_string(&value) else {
             error!("issue in converting to payload");
             return;
@@ -256,15 +256,15 @@ impl SocketTestAgent {
                 }
             }
 
-            let _json_message = JsonResponseData {
+            let json_message = JsonResponseData {
                 action: action_str.to_owned(),
-                data: status_dict.to_owned(),
+                data: status_dict.clone(),
                 ue: "rust".to_owned(),
                 test_id: test_id.to_string(),
             };
 
-            <SocketTestAgent as Clone>::clone(&self)
-                .send_to_tm(_json_message)
+            <SocketTestAgent as Clone>::clone(self)
+                .send_to_tm(json_message)
                 .await;
         }
         self.close_connection();

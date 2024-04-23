@@ -59,8 +59,14 @@ impl Clone for UTransportSocket {
     }
 }
 
+impl Default for UTransportSocket {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UTransportSocket {
-    pub fn new() -> Self {
+    #[must_use] pub fn new() -> Self {
         let _socket_sync: TcpStreamSync =
             TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
         //let socket_sync    = Arc::new(Mutex::new(_socket_sync));
@@ -100,14 +106,14 @@ impl UTransportSocket {
                 UMessageType::UMESSAGE_TYPE_PUBLISH => {
                     dbg!("calling handle publish....");
                     let _ = self.check_on_receive(&umessage.attributes.source, &umessage);
-                    ()
+                    ();
                 }
                 UMessageType::UMESSAGE_TYPE_NOTIFICATION => todo!(),
                 UMessageType::UMESSAGE_TYPE_UNSPECIFIED => (),
                 UMessageType::UMESSAGE_TYPE_RESPONSE => (),
                 UMessageType::UMESSAGE_TYPE_REQUEST => {
                     let _ = self.check_on_receive(&umessage.attributes.sink, &umessage);
-                    ()
+                    ();
                 }
             }
         }
@@ -204,7 +210,7 @@ impl UTransport for UTransportSocket {
                     })?;
 
                 match socket_clone.write_all(&umsg_serialized) {
-                    Ok(_) => Ok(()),
+                    Ok(()) => Ok(()),
                     Err(_) => Err(UStatus::fail_with_code(
                         UCode::UNAVAILABLE,
                         "Dispatcher communication issue",
@@ -223,7 +229,7 @@ impl UTransport for UTransportSocket {
                     })?;
 
                 match socket_clone.write_all(&umsg_serialized) {
-                    Ok(_) => Ok(()),
+                    Ok(()) => Ok(()),
                     Err(_) => Err(UStatus::fail_with_code(
                         UCode::UNAVAILABLE,
                         "Dispatcher communication issue",
@@ -241,7 +247,7 @@ impl UTransport for UTransportSocket {
                         )
                     })?;
                 match socket_clone.write_all(&umsg_serialized) {
-                    Ok(_) => Ok(()),
+                    Ok(()) => Ok(()),
                     Err(_) => Err(UStatus::fail_with_code(
                         UCode::UNAVAILABLE,
                         "Dispatcher communication issue",
