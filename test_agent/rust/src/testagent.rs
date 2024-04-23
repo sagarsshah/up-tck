@@ -22,12 +22,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- use log::error;
 use async_trait::async_trait;
+use log::error;
 use serde_json::Value;
 use up_rust::{Data, UCode, UListener};
 use up_rust::{UMessage, UStatus, UTransport};
-
 
 use std::io::{Read, Write};
 use std::{
@@ -54,7 +53,6 @@ pub struct SocketTestAgent {
     utransport: UTransportSocket,
     clientsocket: Arc<Mutex<TcpStreamSync>>,
     clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
-    
 }
 
 #[async_trait]
@@ -115,7 +113,6 @@ impl UListener for SocketTestAgent {
     }
 }
 
-
 impl SocketTestAgent {
     pub fn new(
         test_clientsocket: TcpStreamSync,
@@ -136,14 +133,13 @@ impl SocketTestAgent {
 
         let arc_self = Arc::new(self.clone());
         self.clone().inform_tm_ta_starting();
-    
-     let mut socket = if let Ok(socket) = self.clientsocket.lock() {
-        socket
-    } else {
-        
-        error!("Error: Error accessing TM server");
-        return ; 
-    };
+
+        let mut socket = if let Ok(socket) = self.clientsocket.lock() {
+            socket
+        } else {
+            error!("Error: Error accessing TM server");
+            return;
+        };
 
         loop {
             let mut recv_data = [0; 2048];
@@ -168,8 +164,8 @@ impl SocketTestAgent {
             let mut action_str = "";
             let cleaned_json_string = sanitize_input_string(&recv_data_str).replace("BYTES:", "");
             let json_msg: Value =
-            serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
-   
+                serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
+
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
             let test_id = json_msg["test_id"].clone();

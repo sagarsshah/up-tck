@@ -108,11 +108,11 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             error!("Error: entity id filed is not a string");
         };
 
-        if let Some(entity_value) = value
-            .get("entity")
-            .and_then(|entity_value| entity_value.get("version_major")
-            .and_then(|entity_value| entity_value.as_str()))
-        {
+        if let Some(entity_value) = value.get("entity").and_then(|entity_value| {
+            entity_value
+                .get("version_major")
+                .and_then(|entity_value| entity_value.as_str())
+        }) {
             if let Ok(version_major_parsed) = entity_value.parse::<u32>() {
                 _entity.version_major = Some(version_major_parsed);
             }
@@ -120,11 +120,11 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             error!("Error: entity_value version major is not a string");
         };
 
-        if let Some(entity_value) = value
-            .get("entity")
-            .and_then(|entity_value| entity_value.get("version_minor")
-            .and_then(|entity_value| entity_value.as_str()))
-        {
+        if let Some(entity_value) = value.get("entity").and_then(|entity_value| {
+            entity_value
+                .get("version_minor")
+                .and_then(|entity_value| entity_value.as_str())
+        }) {
             if let Ok(version_minor_parsed) = entity_value.parse::<u32>() {
                 _entity.version_minor = Some(version_minor_parsed);
             }
@@ -314,7 +314,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             } else {
                 error!("Error: Failed to parse _reqid_lsb as u64");
             }
-        } ;
+        };
 
         if let Some(resource) = value
             .get("reqid")
@@ -326,7 +326,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             } else {
                 dbg!("Error: Failed to parse _reqid_msb as u64");
             }
-        } ;
+        };
 
         _uattributes.reqid = MessageField(Some(Box::new(___reqid)));
 

@@ -28,24 +28,23 @@ use up_rust::UListener;
 use up_rust::{UAttributesValidators, UriValidator};
 use up_rust::{UCode, UMessage, UMessageType, UStatus, UTransport, UUri};
 
+use crate::constants::BYTES_MSG_LENGTH;
+use crate::constants::DISPATCHER_ADDR;
 use protobuf::Message;
+use std::collections::hash_map::Entry;
+use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::net::TcpStream as TcpStreamSync;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-use std::collections::HashSet;
-use up_rust::ComparableListener;
-use std::collections::hash_map::Entry;
 use tokio::task;
-use crate::constants::BYTES_MSG_LENGTH;
-use crate::constants::DISPATCHER_ADDR;
+use up_rust::ComparableListener;
 
 pub struct UTransportSocket {
     socket_sync: TcpStreamSync,
     listener_map: Arc<Mutex<HashMap<UUri, HashSet<ComparableListener>>>>,
-    
 }
 impl Clone for UTransportSocket {
     fn clone(&self) -> Self {
@@ -54,7 +53,7 @@ impl Clone for UTransportSocket {
                 .socket_sync
                 .try_clone()
                 .expect("issue in cloning sync socket"),
-          //  listener_map: self.listener_map.clone(),
+            //  listener_map: self.listener_map.clone(),
             listener_map: self.listener_map.clone(),
         }
     }
@@ -68,8 +67,8 @@ impl UTransportSocket {
         let socket_sync = _socket_sync;
         UTransportSocket {
             socket_sync,
-          //  listener_map: Arc::new(Mutex::new(HashMap::new())),
-            listener_map:Arc::new(Mutex::new(HashMap::new())),
+            //  listener_map: Arc::new(Mutex::new(HashMap::new())),
+            listener_map: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -99,17 +98,17 @@ impl UTransportSocket {
                 .enum_value_or(UMessageType::UMESSAGE_TYPE_UNSPECIFIED)
             {
                 UMessageType::UMESSAGE_TYPE_PUBLISH => {
-                 dbg!("calling handle publish....");
-                 let _ = self.check_on_receive(&umessage.attributes.source,&umessage);
-                   ()
+                    dbg!("calling handle publish....");
+                    let _ = self.check_on_receive(&umessage.attributes.source, &umessage);
+                    ()
                 }
                 UMessageType::UMESSAGE_TYPE_NOTIFICATION => todo!(),
                 UMessageType::UMESSAGE_TYPE_UNSPECIFIED => (),
                 UMessageType::UMESSAGE_TYPE_RESPONSE => (),
                 UMessageType::UMESSAGE_TYPE_REQUEST => {
-                    let _ = self.check_on_receive(&umessage.attributes.sink,&umessage);
+                    let _ = self.check_on_receive(&umessage.attributes.sink, &umessage);
                     ()
-                } 
+                }
             }
         }
     }
@@ -124,10 +123,9 @@ impl UTransportSocket {
                 return Err(UStatus::fail_with_code(
                     UCode::NOT_FOUND,
                     format!("No listeners registered for topic: {:?}", &uuri),
-                ))
+                ));
             }
             Entry::Occupied(mut e) => {
-         
                 let occupied = e.get_mut();
                 dbg!("check_on_receive 2..\n");
                 if occupied.is_empty() {
@@ -148,10 +146,7 @@ impl UTransportSocket {
 
         Ok(())
     }
-
-
 }
-
 
 #[async_trait]
 impl UTransport for UTransportSocket {
@@ -173,11 +168,7 @@ impl UTransport for UTransportSocket {
     ///
     /// Returns an error if the message could not be sent.
     async fn send(&self, message: UMessage) -> Result<(), UStatus> {
-        let mut socket_clone = self
-            .socket_sync
-            
-            .try_clone()
-            .expect("issue in sending data");
+        let mut socket_clone = self.socket_sync.try_clone().expect("issue in sending data");
 
         let umsg_serialized = message
             .clone()
@@ -326,12 +317,11 @@ impl UTransport for UTransportSocket {
                 .map_err(|err| UStatus::fail_with_code(UCode::INVALID_ARGUMENT, err.to_string()))?;
 
             if UriValidator::is_rpc_response(&topic) {
-
                 let mut topics_listeners = self.listener_map.lock().unwrap();
                 let listeners = topics_listeners.entry(topic).or_default();
                 let identified_listener = ComparableListener::new(listener);
                 let inserted = listeners.insert(identified_listener);
-    
+
                 return match inserted {
                     true => Ok(()),
                     false => Err(UStatus::fail_with_code(
@@ -339,11 +329,7 @@ impl UTransport for UTransportSocket {
                         "UUri + UListener pair already exists!",
                     )),
                 };
-
-
-
             } else if UriValidator::is_rpc_method(&topic) {
-
                 let mut topics_listeners = self.listener_map.lock().unwrap();
                 let listeners = topics_listeners.entry(topic).or_default();
                 let identified_listener = ComparableListener::new(listener);
@@ -356,10 +342,7 @@ impl UTransport for UTransportSocket {
                         "UUri + UListener pair already exists!",
                     )),
                 };
-
-
             } else {
-
                 let mut topics_listeners = self.listener_map.lock().unwrap();
                 let listeners = topics_listeners.entry(topic).or_default();
                 let identified_listener = ComparableListener::new(listener);
@@ -372,7 +355,6 @@ impl UTransport for UTransportSocket {
                         "UUri + UListener pair already exists!",
                     )),
                 };
-
             }
         }
     }
@@ -415,7 +397,5 @@ impl UTransport for UTransportSocket {
                 }
             }
         };
-         
-       
     }
 }
