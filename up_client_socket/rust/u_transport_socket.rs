@@ -36,14 +36,19 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-
+use std::collections::HashSet;
+use up_rust::ComparableListener;
+use std::collections::hash_map::Entry;
+use tokio::task;
 use crate::constants::BYTES_MSG_LENGTH;
 use crate::constants::DISPATCHER_ADDR;
 
 pub struct UTransportSocket {
     //socket_sync: Arc<Mutex<TcpStreamSync>>,
     socket_sync: TcpStreamSync,
-    listener_map: Arc<Mutex<HashMap<UUri, Vec<Arc<dyn UListener>>>>>,
+  //  listener_map: Arc<Mutex<HashMap<UUri, Vec<Arc<dyn UListener>>>>>,
+    listener_map: Arc<Mutex<HashMap<UUri, HashSet<ComparableListener>>>>,
+    
 }
 impl Clone for UTransportSocket {
     fn clone(&self) -> Self {
@@ -52,6 +57,7 @@ impl Clone for UTransportSocket {
                 .socket_sync
                 .try_clone()
                 .expect("issue in cloning sync socket"),
+          //  listener_map: self.listener_map.clone(),
             listener_map: self.listener_map.clone(),
         }
     }
@@ -65,7 +71,8 @@ impl UTransportSocket {
         let socket_sync = _socket_sync;
         UTransportSocket {
             socket_sync,
-            listener_map: Arc::new(Mutex::new(HashMap::new())),
+          //  listener_map: Arc::new(Mutex::new(HashMap::new())),
+            listener_map:Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -99,14 +106,16 @@ impl UTransportSocket {
                 //Ok(mt) => match mt {
                 UMessageType::UMESSAGE_TYPE_PUBLISH => {
                     println!("calling handle publish...");
-                    self._handle_publish_message(umessage);
+                    self.check_on_receive(&umessage.attributes.source,&umessage);
+                //    self._handle_publish_message(umessage);
                     ()
                 }
                 UMessageType::UMESSAGE_TYPE_NOTIFICATION => todo!(),
                 UMessageType::UMESSAGE_TYPE_UNSPECIFIED => (),
                 UMessageType::UMESSAGE_TYPE_RESPONSE => (),
                 UMessageType::UMESSAGE_TYPE_REQUEST => {
-                    self._handle_request_message(umessage);
+                    self.check_on_receive(&umessage.attributes.sink,&umessage);
+              //      self._handle_request_message(umessage);
                     ()
                 } // },
                   // Err(_) => (),
@@ -114,37 +123,74 @@ impl UTransportSocket {
         }
     }
 
-    fn _handle_publish_message(&mut self, umsg: UMessage) {
-        dbg!("HANDLING PUB MESG");
-        // Create a new Tokio runtime
-        let rt = Runtime::new().unwrap();
+    // fn _handle_publish_message(&mut self, umsg: UMessage) {
+    //     dbg!("HANDLING PUB MESG");
+    //     // Create a new Tokio runtime
+    //    // let rt = Runtime::new().unwrap();
 
-        dbg!(&umsg.attributes.source.to_string());
+    //     dbg!(&umsg.attributes.source.to_string());
+        
+    //     let _ = self.check_on_receive(&umsg.attributes.source,&umsg);
+    //     // if let Some(listner_array) = self
+    //     //     .listener_map
+    //     //     .lock()
+    //     //     .unwrap()
+    //     //     .get(&umsg.attributes.source)
+    //     // {
+    //     //     for listner_ref in listner_array {
+    //     //         rt.block_on(async {
+    //     //             listner_ref.on_receive(umsg.clone()).await;
+    //     //         });
+    //     //     }
+    //     // }
+    // }
 
-        if let Some(listner_array) = self
-            .listener_map
-            .lock()
-            .unwrap()
-            .get(&umsg.attributes.source)
-        {
-            for listner_ref in listner_array {
-                rt.block_on(async {
-                    listner_ref.on_receive(umsg.clone()).await;
-                });
+    // fn _handle_request_message(&mut self, umsg: UMessage) {
+    //     // let rt_ = Runtime::new().unwrap();
+    //     // if let Some(listner_array) = self.listener_map.lock().unwrap().get(&umsg.attributes.sink) {
+    //     //     for listner_ref in listner_array {
+    //     //         rt_.block_on(async {
+    //     //             listner_ref.on_receive(umsg.clone()).await;
+    //     //         });
+    //     //     }
+    //     // }
+    // }
+
+    pub fn check_on_receive(&self, uuri: &UUri, umessage: &UMessage) -> Result<(), UStatus> {
+        let mut topics_listeners = self.listener_map.lock().unwrap();
+        let listeners = topics_listeners.entry(uuri.clone());
+        match listeners {
+            Entry::Vacant(_) => {
+                return Err(UStatus::fail_with_code(
+                    UCode::NOT_FOUND,
+                    format!("No listeners registered for topic: {:?}", &uuri),
+                ))
+            }
+            Entry::Occupied(mut e) => {
+                let occupied = e.get_mut();
+
+                if occupied.is_empty() {
+                    return Err(UStatus::fail_with_code(
+                        UCode::NOT_FOUND,
+                        format!("No listeners registered for topic: {:?}", &uuri),
+                    ));
+                }
+
+                for listener in occupied.iter() {
+                    let task_listener = listener.clone();
+                    let task_umessage = umessage.clone();
+                    task::spawn(async move { task_listener.on_receive(task_umessage).await });
+                }
             }
         }
+
+        Ok(())
     }
 
-    fn _handle_request_message(&mut self, umsg: UMessage) {
-        let rt_ = Runtime::new().unwrap();
-        if let Some(listner_array) = self.listener_map.lock().unwrap().get(&umsg.attributes.sink) {
-            for listner_ref in listner_array {
-                rt_.block_on(async {
-                    listner_ref.on_receive(umsg.clone()).await;
-                });
-            }
-        }
-    }
+
+
+    
+
 }
 
 ///impl UtransportExt for UTransportSocket {
@@ -323,32 +369,77 @@ impl UTransport for UTransportSocket {
                 .map_err(|err| UStatus::fail_with_code(UCode::INVALID_ARGUMENT, err.to_string()))?;
 
             if UriValidator::is_rpc_response(&topic) {
-                self.listener_map
-                    .lock()
-                    .unwrap()
-                    .entry(topic)
-                    .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    .or_insert(vec![listener.clone()]);
 
-                Ok(())
+                let mut topics_listeners = self.listener_map.lock().unwrap();
+                let listeners = topics_listeners.entry(topic).or_default();
+                let identified_listener = ComparableListener::new(listener);
+                let inserted = listeners.insert(identified_listener);
+    
+                return match inserted {
+                    true => Ok(()),
+                    false => Err(UStatus::fail_with_code(
+                        UCode::ALREADY_EXISTS,
+                        "UUri + UListener pair already exists!",
+                    )),
+                };
+
+
+//todo: remove
+                // self.listener_map
+                //     .lock()
+                //     .unwrap()
+                //     .entry(topic)
+                //     .and_modify(|listener_local| listener_local.push(listener.clone()))
+                //     .or_insert(vec![listener.clone()]);
+
+                //Ok(())
             } else if UriValidator::is_rpc_method(&topic) {
-                self.listener_map
-                    .lock()
-                    .unwrap()
-                    .entry(topic)
-                    .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    .or_insert(vec![listener.clone()]);
+
+                let mut topics_listeners = self.listener_map.lock().unwrap();
+                let listeners = topics_listeners.entry(topic).or_default();
+                let identified_listener = ComparableListener::new(listener);
+                let inserted = listeners.insert(identified_listener);
                 dbg!("register listner called for rpc !");
-                Ok(())
+                return match inserted {
+                    true => Ok(()),
+                    false => Err(UStatus::fail_with_code(
+                        UCode::ALREADY_EXISTS,
+                        "UUri + UListener pair already exists!",
+                    )),
+                };
+
+//todo: remove
+                // self.listener_map
+                //     .lock()
+                //     .unwrap()
+                //     .entry(topic)
+                //     .and_modify(|listener_local| listener_local.push(listener.clone()))
+                //     .or_insert(vec![listener.clone()]);
+                // dbg!("register listner called for rpc !");
+                //Ok(())
             } else {
-                self.listener_map
-                    .lock()
-                    .unwrap()
-                    .entry(topic)
-                    .and_modify(|listener_local| listener_local.push(listener.clone()))
-                    .or_insert(vec![listener.clone()]);
+
+                let mut topics_listeners = self.listener_map.lock().unwrap();
+                let listeners = topics_listeners.entry(topic).or_default();
+                let identified_listener = ComparableListener::new(listener);
+                let inserted = listeners.insert(identified_listener);
                 dbg!("register listner called for topic !");
-                Ok(())
+                return match inserted {
+                    true => Ok(()),
+                    false => Err(UStatus::fail_with_code(
+                        UCode::ALREADY_EXISTS,
+                        "UUri + UListener pair already exists!",
+                    )),
+                };
+//    //todo: remove             
+//                 self.listener_map
+//                     .lock()
+//                     .unwrap()
+//                     .entry(topic)
+//                     .and_modify(|listener_local| listener_local.push(listener.clone()))
+//                     .or_insert(vec![listener.clone()]);
+//                 dbg!("register listner called for topic !");
+//                 Ok(())
             }
         }
     }
@@ -370,24 +461,48 @@ impl UTransport for UTransportSocket {
         topic: UUri,
         listener: Arc<dyn UListener>,
     ) -> Result<(), UStatus> {
-        let mut map = self.listener_map.lock().expect("Failed to acquire lock");
-        let listner_clone = Arc::clone(&listener) as Arc<dyn UListener>;
+       // let mut map = self.listener_map.lock().expect("Failed to acquire lock");
+       // let listner_clone = Arc::clone(&listener) as Arc<dyn UListener>;
 
-        if let Some(listeners) = map.get_mut(&topic) {
-            if let Some(index) = listeners
-                .iter()
-                .position(|l| Arc::ptr_eq(l, &listner_clone))
-            {
-                let _ = listeners.remove(index);
+        let mut topics_listeners = self.listener_map.lock().unwrap();
+        let listeners = topics_listeners.entry(topic.clone());
+        return match listeners {
+            Entry::Vacant(_) => Err(UStatus::fail_with_code(
+                UCode::NOT_FOUND,
+                format!("No listeners registered for topic: {:?}", &topic),
+            )),
+            Entry::Occupied(mut e) => {
+                let occupied = e.get_mut();
+                let identified_listener = ComparableListener::new(listener);
+                let removed = occupied.remove(&identified_listener);
 
-                // If the vector becomes empty after removal, delete the entry from the map
-                if listeners.is_empty() {
-                    map.remove(&topic);
+                match removed {
+                    true => Ok(()),
+                    false => Err(UStatus::fail_with_code(
+                        UCode::NOT_FOUND,
+                        "UUri + UListener not found!",
+                    )),
                 }
             }
-            Ok(())
-        } else {
-            Err(UStatus::fail_with_code(UCode::NOT_FOUND, "Not found"))
-        }
+        };
+    
+       
+       
+        // if let Some(listeners) = map.get_mut(&topic) {
+        //     if let Some(index) = listeners
+        //         .iter()
+        //         .position(|l| Arc::ptr_eq(l, &listner_clone))
+        //     {
+        //         let _ = listeners.remove(index);
+
+        //         // If the vector becomes empty after removal, delete the entry from the map
+        //         if listeners.is_empty() {
+        //             map.remove(&topic);
+        //         }
+        //     }
+        //     Ok(())
+        // } else {
+        //     Err(UStatus::fail_with_code(UCode::NOT_FOUND, "Not found"))
+        // }
     }
 }

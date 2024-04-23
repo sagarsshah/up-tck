@@ -22,12 +22,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+ use log::error;
 use async_trait::async_trait;
 use serde_json::Value;
 use up_rust::{Data, UCode, UListener};
 use up_rust::{UMessage, UStatus, UTransport};
 
-use log::error;
+
 use std::io::{Read, Write};
 use std::{
     collections::HashMap,
@@ -148,7 +149,14 @@ impl SocketTestAgent {
 
         let arc_self = Arc::new(self.clone());
         self.clone().inform_tm_ta_starting();
-        let mut socket = self.clientsocket.lock().expect("error accessing TM server");
+    
+     let mut socket = if let Ok(socket) = self.clientsocket.lock() {
+        socket
+    } else {
+        
+        error!("Error: Error accessing TM server");
+        return ; 
+    };
 
         loop {
             let mut recv_data = [0; 2048];
@@ -172,15 +180,27 @@ impl SocketTestAgent {
                 String::from_utf8_lossy(&recv_data[..bytes_received]);
             let mut action_str = "";
             let cleaned_json_string = sanitize_input_string(&recv_data_str).replace("BYTES:", "");
-            let json_msg: Value =
-                serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
+          
+            let json_msg: Value = serde_json::from_str(&cleaned_json_string.to_string())
+    .unwrap_or_else(|e| {
+        error!("Issue in parsing JSON: {}",e);
+    }).into();
+       
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
             let test_id = json_msg["test_id"].clone();
 
             let json_str_ref = action
-                .as_str()
-                .expect("issue in converting value to string");
+            .as_str()
+            .unwrap_or_else(|| {
+                error!("Issue in converting value to string: ");
+                "None"
+            });
+
+
+            // let json_str_ref = action
+            //     .as_str()
+            //     .expect("issue in converting value to string");
 
             dbg!(json_str_ref);
             let status = match json_str_ref {
