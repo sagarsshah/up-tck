@@ -227,14 +227,12 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
         dbg!("uattributes.type_: {:?}", uattributes.type_);
 
         if let Some(source_value) = value.get("source") {
-            if let Ok(wrapper_uri) = serde_json::from_value::<WrapperUUri>(source_value.clone())
-            {
+            if let Ok(wrapper_uri) = serde_json::from_value::<WrapperUUri>(source_value.clone()) {
                 uattributes.source = MessageField(Some(Box::new(wrapper_uri.0)));
             }
         };
         if let Some(sink_value) = value.get("sink") {
-            if let Ok(wrapper_uri) = serde_json::from_value::<WrapperUUri>(sink_value.clone())
-            {
+            if let Ok(wrapper_uri) = serde_json::from_value::<WrapperUUri>(sink_value.clone()) {
                 uattributes.sink = MessageField(Some(Box::new(wrapper_uri.0)));
             }
         };
@@ -296,10 +294,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             error!("commstatus value is not string");
         };
 
-        dbg!(
-            " uattributes.commstatus: {:?}",
-            uattributes.commstatus
-        );
+        dbg!(" uattributes.commstatus: {:?}", uattributes.commstatus);
 
         let mut ___reqid = UUID::new();
         if let Some(resource) = value
@@ -335,12 +330,11 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
                 error!("Error: token is not a string");
             }
         };
-        if let Some(_traceparent) = value
+        if let Some(traceparent) = value
             .get("traceparent")
-            .and_then(|_traceparent| _traceparent.as_str())
+            .and_then(|traceparent| traceparent.as_str())
         {
-            //if let Some(traceparent_str) = _traceparent.as_str() {
-            uattributes.traceparent = Some(_traceparent.to_owned());
+            uattributes.traceparent = Some(traceparent.to_owned());
         } else {
             error!("Error: traceparent is not a string");
         };
@@ -426,7 +420,7 @@ impl<'de> Deserialize<'de> for WrapperUMessage {
         Ok(WrapperUMessage(UMessage {
             attributes: Some(wattributes.0).into(),
             payload: Some(wpayload.0).into(),
-            special_fields: Default::default(),
+            special_fields: SpecialFields::default(),
         }))
     }
 }

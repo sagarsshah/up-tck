@@ -41,13 +41,9 @@ use tokio::runtime::Runtime;
 fn main() {
     let handle = thread::spawn(|| {
         // Create a new Tokio runtime
-        //let rt = Runtime::new().unwrap();
-        let rt = if let Ok(rt) = Runtime::new() {
-            rt
-        } else {
+        let Ok(rt) = Runtime::new() else {
             eprintln!("Error creating runtime");
             return;
-            //  return Err();
         };
 
         let test_agent_socket: TcpStreamSync =

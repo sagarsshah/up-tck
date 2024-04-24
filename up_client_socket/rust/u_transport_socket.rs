@@ -66,18 +66,23 @@ impl Default for UTransportSocket {
 }
 
 impl UTransportSocket {
-    #[must_use] pub fn new() -> Self {
+    #[must_use]
+    /// # Panics
+    ///
+    /// Will panic if issue connecting in sync socket
+    pub fn new() -> Self {
         let _socket_sync: TcpStreamSync =
             TcpStreamSync::connect(DISPATCHER_ADDR).expect("issue in connecting  sync socket");
-        //let socket_sync    = Arc::new(Mutex::new(_socket_sync));
         let socket_sync = _socket_sync;
         UTransportSocket {
             socket_sync,
-            //  listener_map: Arc::new(Mutex::new(HashMap::new())),
             listener_map: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
+    /// # Panics
+    ///
+    /// Will panic if failed to parse message
     pub fn socket_init(&mut self) {
         loop {
             // Receive data from the socket
@@ -106,19 +111,23 @@ impl UTransportSocket {
                 UMessageType::UMESSAGE_TYPE_PUBLISH => {
                     dbg!("calling handle publish....");
                     let _ = self.check_on_receive(&umessage.attributes.source, &umessage);
-                    ();
                 }
                 UMessageType::UMESSAGE_TYPE_NOTIFICATION => todo!(),
-                UMessageType::UMESSAGE_TYPE_UNSPECIFIED => (),
-                UMessageType::UMESSAGE_TYPE_RESPONSE => (),
+                UMessageType::UMESSAGE_TYPE_UNSPECIFIED | UMessageType::UMESSAGE_TYPE_RESPONSE => (),
                 UMessageType::UMESSAGE_TYPE_REQUEST => {
                     let _ = self.check_on_receive(&umessage.attributes.sink, &umessage);
-                    ();
                 }
             }
         }
     }
 
+
+    /// # Panics
+    ///
+    /// Will panic if something breaks
+    /// # Errors
+    ///
+    /// Will return `Err` if no listeners registered for topic
     pub fn check_on_receive(&self, uuri: &UUri, umessage: &UMessage) -> Result<(), UStatus> {
         let mut topics_listeners = self.listener_map.lock().unwrap();
         let listeners = topics_listeners.entry(uuri.clone());
@@ -254,14 +263,12 @@ impl UTransport for UTransportSocket {
                     )),
                 }
             }
-            UMessageType::UMESSAGE_TYPE_UNSPECIFIED => Err(UStatus::fail_with_code(
-                UCode::INVALID_ARGUMENT,
-                "Wrong Message type in UAttributes",
-            )),
-            UMessageType::UMESSAGE_TYPE_NOTIFICATION => Err(UStatus::fail_with_code(
-                UCode::INVALID_ARGUMENT,
-                "Wrong Message type in UAttributes",
-            )),
+            UMessageType::UMESSAGE_TYPE_UNSPECIFIED | UMessageType::UMESSAGE_TYPE_NOTIFICATION => {
+                Err(UStatus::fail_with_code(
+                    UCode::INVALID_ARGUMENT,
+                    "Wrong Message type in UAttributes",
+                ))
+            }
         }
     }
 
@@ -328,12 +335,13 @@ impl UTransport for UTransportSocket {
                 let identified_listener = ComparableListener::new(listener);
                 let inserted = listeners.insert(identified_listener);
 
-                return match inserted {
-                    true => Ok(()),
-                    false => Err(UStatus::fail_with_code(
+                return if inserted {
+                    Ok(())
+                } else {
+                    Err(UStatus::fail_with_code(
                         UCode::ALREADY_EXISTS,
                         "UUri + UListener pair already exists!",
-                    )),
+                    ))
                 };
             } else if UriValidator::is_rpc_method(&topic) {
                 let mut topics_listeners = self.listener_map.lock().unwrap();
@@ -341,27 +349,28 @@ impl UTransport for UTransportSocket {
                 let identified_listener = ComparableListener::new(listener);
                 let inserted = listeners.insert(identified_listener);
                 dbg!("register listner called for rpc !");
-                return match inserted {
-                    true => Ok(()),
-                    false => Err(UStatus::fail_with_code(
+                return if inserted {
+                    Ok(())
+                } else {
+                    Err(UStatus::fail_with_code(
                         UCode::ALREADY_EXISTS,
                         "UUri + UListener pair already exists!",
-                    )),
-                };
-            } else {
-                let mut topics_listeners = self.listener_map.lock().unwrap();
-                let listeners = topics_listeners.entry(topic).or_default();
-                let identified_listener = ComparableListener::new(listener);
-                let inserted = listeners.insert(identified_listener);
-                dbg!("register listner called for topic !");
-                return match inserted {
-                    true => Ok(()),
-                    false => Err(UStatus::fail_with_code(
-                        UCode::ALREADY_EXISTS,
-                        "UUri + UListener pair already exists!",
-                    )),
+                    ))
                 };
             }
+            let mut topics_listeners = self.listener_map.lock().unwrap();
+            let listeners = topics_listeners.entry(topic).or_default();
+            let identified_listener = ComparableListener::new(listener);
+            let inserted = listeners.insert(identified_listener);
+            dbg!("register listner called for topic !");
+            return if inserted {
+                Ok(())
+            } else {
+                Err(UStatus::fail_with_code(
+                    UCode::ALREADY_EXISTS,
+                    "UUri + UListener pair already exists!",
+                ))
+            };
         }
     }
 
@@ -394,12 +403,13 @@ impl UTransport for UTransportSocket {
                 let identified_listener = ComparableListener::new(listener);
                 let removed = occupied.remove(&identified_listener);
 
-                match removed {
-                    true => Ok(()),
-                    false => Err(UStatus::fail_with_code(
+                if removed {
+                    Ok(())
+                } else {
+                    Err(UStatus::fail_with_code(
                         UCode::NOT_FOUND,
                         "UUri + UListener not found!",
-                    )),
+                    ))
                 }
             }
         };

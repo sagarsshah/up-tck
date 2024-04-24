@@ -37,7 +37,7 @@ use std::{
 use serde::Serialize;
 
 use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
-use crate::{TcpStreamSync, UTransportSocket, constants, utils};
+use crate::{constants, utils, TcpStreamSync, UTransportSocket};
 
 use self::utils::sanitize_input_string;
 
@@ -129,8 +129,6 @@ impl SocketTestAgent {
     }
 
     pub async fn receive_from_tm(&mut self) {
-        // Clone Arc to capture it in the closure
-
         let arc_self = Arc::new(self.clone());
         self.clone().inform_tm_ta_starting();
 
@@ -143,7 +141,6 @@ impl SocketTestAgent {
 
         loop {
             let mut recv_data = [0; 2048];
-
             let bytes_received = match socket.read(&mut recv_data) {
                 Ok(bytes_received) => bytes_received,
                 Err(e) => {
@@ -152,12 +149,9 @@ impl SocketTestAgent {
                     break;
                 }
             };
-            // Check if no data is received
             if bytes_received == 0 {
                 continue;
             }
-
-            dbg!("RECEIVEDFROMTM");
 
             let recv_data_str: std::borrow::Cow<'_, str> =
                 String::from_utf8_lossy(&recv_data[..bytes_received]);
@@ -214,7 +208,6 @@ impl SocketTestAgent {
                 _ => Ok(()),
             };
 
-            // Create an empty HashMap to store the fields of the message
             let mut status_dict: HashMap<String, _> = HashMap::new();
 
             match status {
@@ -227,8 +220,6 @@ impl SocketTestAgent {
                     status_dict.insert("code".to_string(), 0.to_string());
                 }
                 Err(u_status) => {
-                    // Handle the case when status is an error
-                    // Convert the error message to a string and insert it into the HashMap
                     status_dict.insert(
                         "message".to_string(),
                         u_status.message.clone().unwrap_or_default(),
