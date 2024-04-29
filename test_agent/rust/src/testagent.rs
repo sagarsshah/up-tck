@@ -36,6 +36,7 @@ use std::{
 
 use serde::Serialize;
 
+use crate::constants::SDK_INIT_MESSAGE;
 use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
 use crate::{constants, utils, TcpStreamSync, UTransportSocket};
 
@@ -48,7 +49,7 @@ pub struct JsonResponseData {
     ue: String,
     test_id: String,
 }
-#[derive(Clone)]
+//#[derive(Clone)]
 pub struct SocketTestAgent {
     utransport: UTransportSocket,
     clientsocket: Arc<Mutex<TcpStreamSync>>,
@@ -105,7 +106,8 @@ impl UListener for SocketTestAgent {
         //todo: revisit this and check:Better pattern might be to have the UListener be impled on a different struct
         //e.g. SocketTestListener that then holds an Arc<Mutex<SocketTestAgent>> to be able to call send_to_tm() on that instead.
         dbg!("sending received data to tm....");
-        self.clone().send_to_tm(json_message).await;
+        //self.clone().send_to_tm(json_message).await;
+        self.send_to_tm(json_message).await;
     }
 
     async fn on_error(&self, _err: UStatus) {
@@ -129,9 +131,10 @@ impl SocketTestAgent {
     }
 
     pub async fn receive_from_tm(&mut self) {
-        let arc_self = Arc::new(self.clone());
-        self.clone().inform_tm_ta_starting();
-
+        //let arc_self = Arc::new(self.clone());
+        let arc_self = Arc::new(self);
+     //   self.clone().inform_tm_ta_starting();
+     self.inform_tm_ta_starting();
         let mut socket = if let Ok(socket) = self.clientsocket.lock() {
             socket
         } else {
@@ -187,7 +190,9 @@ impl SocketTestAgent {
                     self.utransport
                         .register_listener(
                             u_uuri,
-                            Arc::clone(&cloned_listener) as Arc<dyn UListener>,
+                           //Arc::clone(&cloned_listener) as Arc<dyn UListener>,
+                           &cloned_listener as Arc<dyn UListener>,
+                         
                         )
                         .await
                 }
@@ -254,15 +259,17 @@ impl SocketTestAgent {
                 test_id: test_id.to_string(),
             };
 
-            <SocketTestAgent as Clone>::clone(self)
-                .send_to_tm(json_message)
-                .await;
+
+            self.send_to_tm(json_message).await;
+            // <SocketTestAgent as Clone>::clone(self)
+            //     .send_to_tm(json_message)
+            //     .await;
         }
         self.close_connection();
     }
 
     fn inform_tm_ta_starting(self) {
-        let sdk_init = r#"{"ue":"rust","data":{"SDK_name":"rust"},"action":"initialize"}"#;
+        let sdk_init = SDK_INIT_MESSAGE;
 
         //inform TM that rust TA is running
         dbg!("Sending SDK name to Test Manager!");

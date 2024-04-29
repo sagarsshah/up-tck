@@ -37,6 +37,7 @@ use utransport_socket::UTransportSocket;
 mod testagent;
 use std::net::TcpStream as TcpStreamSync;
 use tokio::runtime::Runtime;
+use log::error;
 
 fn main() {
     let handle = thread::spawn(|| {
@@ -54,30 +55,58 @@ fn main() {
         rt.block_on(async {
             // Spawn a Tokio task to connect to TEST_MANAGER_ADDR asynchronously
 
-            let mut transport_socket = UTransportSocket::new();
-            let transport_socket_clone = transport_socket.clone();
+            let  transport_socket = match UTransportSocket::new(){
+                Ok(socket) => {
+                    // The function call succeeded
+                    dbg!("socket trasport create successfully");
+                    socket
+                }
+                Err(err) => {
+                    // The function call failed with an error
+                    error!("socket trasport create failed: {}", err);
+                  return;
+                }
+
+            };
+
+            
+         //   let transport_socket_clone = transport_socket.clone();
 
             // Spawn a blocking task within the runtime
-            let blocking_task = tokio::task::spawn_blocking(move || {
-                println!("calling socket_init..");
-                transport_socket.socket_init();
-            });
+        //    let blocking_task = tokio::task::spawn_blocking(move || {
+                // println!("calling socket_init..");
+              //  transport_socket.socket_init();
 
-            // Don't wait for the blocking task to finish
-            tokio::spawn(async move {
-                if let Err(err) = blocking_task.await {
-                    dbg!("Error in socket_init: {}", err);
-                    return;
-                }
-                dbg!("socket_init completed successfully");
-            });
+                // match transport_socket.socket_init(){
+                //     Ok(_) => {
+                //         // The function call succeeded
+                //         dbg!("socket trasport initilized successfully");
+                //     }
+                //     Err(err) => {
+                //         // The function call failed with an error
+                //         error!("socket trasport initilized failed: {}", err);
+                //       return;
+                //     }
+                // }
+
+          //  });
+
+           // Don't wait for the blocking task to finish
+            // tokio::spawn(async move {
+            //     if let Err(err) = blocking_task.await {
+            //         dbg!("Error in socket_init: {}", err);
+            //         return;
+            //     }
+            //     dbg!("socket_init completed successfully");
+            // });
 
             let agent = SocketTestAgent::new(
                 test_agent_socket,
                 test_agent_socket_to_tm,
-                transport_socket_clone,
+                transport_socket,
             );
-            agent.clone().receive_from_tm().await;
+            //agent.clone().receive_from_tm().await;
+            agent.receive_from_tm().await;
         });
     });
 

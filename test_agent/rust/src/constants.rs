@@ -25,6 +25,7 @@
 pub const SEND_COMMAND: &str = "send";
 pub const REGISTER_LISTENER_COMMAND: &str = "registerlistener";
 pub const UNREGISTER_LISTENER_COMMAND: &str = "unregisterlistener";
+pub const SDK_INIT_MESSAGE: &str = r#"{"ue":"rust","data":{"SDK_name":"rust"},"action":"initialize"}"#;
 
 pub const RESPONSE_ON_RECEIVE: &str = "onreceive";
 

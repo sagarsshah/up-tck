@@ -57,7 +57,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
         //update authority
 
         if let Some(authority_value) = value
-            .get("authority_value")
+            .get("authority")
             .and_then(|authority_value| authority_value.get("name"))
             .and_then(|authority_value| authority_value.as_str())
         {
