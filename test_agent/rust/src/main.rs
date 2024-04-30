@@ -47,7 +47,7 @@ fn main() {
             return;
         };
 
-        let test_agent_socket = match TcpStream::connect(TEST_MANAGER_ADDR) {
+        let test_agent = match TcpStream::connect(TEST_MANAGER_ADDR) {
             Ok(socket) => socket,
             Err(err) => {
                 error!("Error connecting test agent socket: {}", err);
@@ -56,10 +56,19 @@ fn main() {
             }
         };
 
-        let test_agent_socket_to_tm = match TcpStream::connect(TEST_MANAGER_ADDR) {
+        let ta_to_tm_socket = match TcpStream::connect(TEST_MANAGER_ADDR) {
             Ok(socket) => socket,
             Err(err) => {
                 error!("Error connecting test agent socket: {}", err);
+
+                return;
+            }
+        };
+
+        let foo_listner_socket_to_tm = match TcpStream::connect(TEST_MANAGER_ADDR) {
+            Ok(socket) => socket,
+            Err(err) => {
+                error!("Error connecting foo listner socket: {}", err);
 
                 return;
             }
@@ -68,7 +77,7 @@ fn main() {
         rt.block_on(async {
             // Spawn a Tokio task to connect to TEST_MANAGER_ADDR asynchronously
 
-            let transport_socket = match UTransportSocket::new() {
+            let u_transport = match UTransportSocket::new() {
                 Ok(socket) => {
                     // The function call succeeded
                     dbg!("socket trasport create successfully");
@@ -81,14 +90,14 @@ fn main() {
                 }
             };
 
-            //   let transport_socket_clone = transport_socket.clone();
+            //   let transport_socket_clone = u_transport.clone();
 
             // Spawn a blocking task within the runtime
             //    let blocking_task = tokio::task::spawn_blocking(move || {
             // println!("calling socket_init..");
-            //  transport_socket.socket_init();
+            //  u_transport.socket_init();
 
-            // match transport_socket.socket_init(){
+            // match u_transport.socket_init(){
             //     Ok(_) => {
             //         // The function call succeeded
             //         dbg!("socket trasport initilized successfully");
@@ -110,10 +119,13 @@ fn main() {
             //     }
             //     dbg!("socket_init completed successfully");
             // });
-            let foo_listener = Arc::new(FooListener::new(test_agent_socket_to_tm));
-            let agent = SocketTestAgent::new(test_agent_socket, foo_listener);
+            let foo_listener = Arc::new(FooListener::new(foo_listner_socket_to_tm));
+            let agent = SocketTestAgent::new(test_agent, foo_listener);
             //agent.clone().receive_from_tm().await;
-            agent.clone().receive_from_tm(transport_socket).await;
+            agent
+                .clone()
+                .receive_from_tm(u_transport, ta_to_tm_socket)
+                .await;
         });
     });
 

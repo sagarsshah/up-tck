@@ -42,5 +42,4 @@ pub fn test_constants() {
     );
 
     dbg!("TEST_MANAGER_ADDR: {:?}", TEST_MANAGER_ADDR);
-
 }

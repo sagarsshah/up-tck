@@ -146,8 +146,18 @@ impl SocketTestAgent {
         }
     }
 
-    pub async fn receive_from_tm(&mut self, utransport: UTransportSocket) {
-        self.clone().inform_tm_ta_starting();
+    pub async fn receive_from_tm(
+        &mut self,
+        utransport: UTransportSocket,
+        ta_to_tm_socket: TcpStream,
+    ) {
+        let Ok(ta_to_tm_socket_clone) = ta_to_tm_socket.try_clone() else {
+            error!("Socket cloning failed for ta to tm socket clone. exiting as fail to inform TM");
+
+            return;
+        };
+
+        self.clone().inform_tm_ta_starting(ta_to_tm_socket_clone);
 
         let tmp_socket = self.clientsocket.clone();
 
@@ -293,41 +303,47 @@ impl SocketTestAgent {
                 ue: "rust".to_owned(),
                 test_id: test_id.to_string(),
             };
+            //  let ta_to_tm_socket_clone  = ta_to_tm_socket.try_clone().expect("socket cloning failed");
+            //   let ta_to_tm_socket_clone = if let Ok(socket) = ta_to_tm_socket.try_clone() {
+            //     socket
+            // } else {
 
-            self.clone().send_to_tm(json_message).await;
+            //     error!("Socket cloning failed for ta to tm socket clone");
+
+            // continue;
+            // };
+
+            let Ok(ta_to_tm_socket_clone) = ta_to_tm_socket.try_clone() else {
+                error!("Socket cloning failed for ta to tm socket clone");
+
+                continue;
+            };
+
+            self.clone()
+                .send_to_tm(json_message, ta_to_tm_socket_clone)
+                .await;
         }
         self.close_connection();
     }
 
-    fn inform_tm_ta_starting(self) {
+    fn inform_tm_ta_starting(self, mut ta_to_tm_socket: TcpStream) {
         let sdk_init = SDK_INIT_MESSAGE;
 
         //inform TM that rust TA is running
         dbg!("Sending SDK name to Test Manager!");
         let message = sdk_init.as_bytes();
 
-        let Ok(mut socket) = self.clientsocket.try_lock() else {
-            error!("faile to aquire lock for sending init message to TM ");
-            return;
-        };
-
-        let result = socket.write_all(message);
+        let result = ta_to_tm_socket.write_all(message);
         match result {
             Ok(()) => println!("on receive could send init to TM"),
             Err(err) => error!("on receive could not send init to TM{}", err),
         }
     }
 
-    async fn send_to_tm(self, json_message: JsonResponseData) {
+    async fn send_to_tm(self, json_message: JsonResponseData, mut ta_to_tm_socket: TcpStream) {
         let json_message_str = convert_json_to_jsonstring(&json_message);
         let message = json_message_str.as_bytes();
-
-        let Ok(mut socket) = self.clientsocket.try_lock() else {
-            error!("faile to aquire lock for sending init message to TM ");
-            return;
-        };
-
-        let result = socket.write_all(message);
+        let result = ta_to_tm_socket.write_all(message);
         match result {
             Ok(()) => println!("on receive could send init to TM"),
             Err(err) => error!("on receive could not send init to TM{}", err),
