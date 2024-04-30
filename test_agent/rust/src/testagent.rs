@@ -25,6 +25,7 @@
 use async_trait::async_trait;
 use log::error;
 use serde_json::Value;
+use tokio::io::AsyncReadExt;
 use up_rust::{Data, UCode, UListener};
 use up_rust::{UMessage, UStatus, UTransport};
 
@@ -40,6 +41,7 @@ use crate::constants::SDK_INIT_MESSAGE;
 use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
 use crate::{constants, utils, UTransportSocket};
 use std::net::TcpStream;
+use tokio::net::TcpStream as TCPStremAsync;
 
 use self::utils::sanitize_input_string;
 
@@ -165,16 +167,18 @@ impl SocketTestAgent {
             error!("Error: Error accessing TM server");
             return;
         };
-
+        dbg!("start the loop: to receive data");
         loop {
             let mut recv_data = [0; 2048];
-            let bytes_received = match socket.read(&mut recv_data) {
+            dbg!("wait for data");
+            let bytes_received = match socket.read(&mut recv_data){
                 Ok(bytes_received) => bytes_received,
                 Err(e) => {
                     dbg!("Socket error: {}", e);
                     break;
                 }
             };
+            dbg!("received data: {}", bytes_received.clone());
             if bytes_received == 0 {
                 continue;
             }
@@ -332,8 +336,14 @@ impl SocketTestAgent {
         //inform TM that rust TA is running
         dbg!("Sending SDK name to Test Manager!");
         let message = sdk_init.as_bytes();
+        let tmp_socket = self.clientsocket.clone();
 
-        let result = ta_to_tm_socket.write_all(message);
+        let Ok(mut socket) = tmp_socket.lock() else {
+            error!("Error: Error accessing TM server");
+            return;
+        };
+
+        let result = socket.write_all(message);
         match result {
             Ok(()) => println!("on receive could send init to TM"),
             Err(err) => error!("on receive could not send init to TM{}", err),
