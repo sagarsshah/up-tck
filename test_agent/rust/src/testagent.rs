@@ -38,7 +38,8 @@ use serde::Serialize;
 
 use crate::constants::SDK_INIT_MESSAGE;
 use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
-use crate::{constants, utils, TcpStreamSync, UTransportSocket};
+use crate::{constants, utils, UTransportSocket};
+use std::net::TcpStream;
 
 use self::utils::sanitize_input_string;
 
@@ -49,16 +50,26 @@ pub struct JsonResponseData {
     ue: String,
     test_id: String,
 }
-//#[derive(Clone)]
+#[derive(Clone)]
 pub struct SocketTestAgent {
-    utransport: UTransportSocket,
-    clientsocket: Arc<Mutex<TcpStreamSync>>,
-    clientsocket_to_tm: Arc<Mutex<TcpStreamSync>>,
+    clientsocket: Arc<Mutex<TcpStream>>,
+
+    listener: Arc<dyn UListener>,
+}
+#[derive(Clone)]
+pub struct FooListener {
+    clientsocket_to_tm: Arc<Mutex<TcpStream>>,
+}
+impl FooListener {
+    pub fn new(test_clientsocket_to_tm: TcpStream) -> Self {
+        let clientsocket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
+        Self { clientsocket_to_tm }
+    }
 }
 
 #[async_trait]
-impl UListener for SocketTestAgent {
-    async fn on_receive(&self, msg: UMessage) {
+impl UListener for FooListener {
+    async fn on_receive(&self, msg: UMessage /*, testAgentHandler: SocketTestAgent*/) {
         dbg!("OnReceive called");
 
         let data_payload = match &msg.payload.data {
@@ -102,12 +113,22 @@ impl UListener for SocketTestAgent {
 
         json_message.data.insert("data".into(), payload_str);
 
-        //<SocketTestAgent as Clone>::clone(&self)
         //todo: revisit this and check:Better pattern might be to have the UListener be impled on a different struct
         //e.g. SocketTestListener that then holds an Arc<Mutex<SocketTestAgent>> to be able to call send_to_tm() on that instead.
         dbg!("sending received data to tm....");
-        //self.clone().send_to_tm(json_message).await;
-        self.send_to_tm(json_message).await;
+        let json_message_str = convert_json_to_jsonstring(&json_message);
+        let message = json_message_str.as_bytes();
+
+        let Ok(mut socket) = self.clientsocket_to_tm.try_lock() else {
+            error!("Failed to acquire lock for sending data to TM from on_receive");
+            return;
+        };
+
+        let result = socket.write_all(message);
+        match result {
+            Ok(()) => println!("on receive could send data to TM"),
+            Err(err) => error!("on receive could not send data to TM{}", err),
+        }
     }
 
     async fn on_error(&self, _err: UStatus) {
@@ -116,28 +137,21 @@ impl UListener for SocketTestAgent {
 }
 
 impl SocketTestAgent {
-    pub fn new(
-        test_clientsocket: TcpStreamSync,
-        test_clientsocket_to_tm: TcpStreamSync,
-        utransport: UTransportSocket,
-    ) -> Self {
+    pub fn new(test_clientsocket: TcpStream, listener: Arc<dyn UListener>) -> Self {
         let clientsocket = Arc::new(Mutex::new(test_clientsocket));
-        let clientsocket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
+
         Self {
-            utransport,
             clientsocket,
-            clientsocket_to_tm,
+            listener,
         }
     }
 
-    pub async fn receive_from_tm(&mut self) {
-        //let arc_self = Arc::new(self.clone());
-        let arc_self = Arc::new(self);
-     //   self.clone().inform_tm_ta_starting();
-     self.inform_tm_ta_starting();
-        let mut socket = if let Ok(socket) = self.clientsocket.lock() {
-            socket
-        } else {
+    pub async fn receive_from_tm(&mut self, utransport: UTransportSocket) {
+        self.clone().inform_tm_ta_starting();
+
+        let tmp_socket = self.clientsocket.clone();
+
+        let Ok(mut socket) = tmp_socket.lock() else {
             error!("Error: Error accessing TM server");
             return;
         };
@@ -147,7 +161,6 @@ impl SocketTestAgent {
             let bytes_received = match socket.read(&mut recv_data) {
                 Ok(bytes_received) => bytes_received,
                 Err(e) => {
-                    // Handle socket errors (e.g., connection closed)
                     dbg!("Socket error: {}", e);
                     break;
                 }
@@ -160,53 +173,75 @@ impl SocketTestAgent {
                 String::from_utf8_lossy(&recv_data[..bytes_received]);
             let mut action_str = "";
             let cleaned_json_string = sanitize_input_string(&recv_data_str).replace("BYTES:", "");
-            let json_msg: Value =
-                serde_json::from_str(&cleaned_json_string.to_string()).expect("issue in from str"); // Assuming serde_json is used for JSON serialization/deserialization
+
+            let json_msg: Value = match serde_json::from_str(&cleaned_json_string.to_string()) {
+                Ok(json) => json,
+                Err(err) => {
+                    error!("error in converting json_msg to string{}", err);
+                    continue;
+                }
+            };
 
             let action = json_msg["action"].clone();
             let json_data_value = json_msg["data"].clone();
             let test_id = json_msg["test_id"].clone();
 
-            let json_str_ref = action
-                .as_str()
-                .expect("issue in converting value to string");
+            let Some(json_str_ref) = action.as_str() else {
+                error!("action is not a string");
+                continue;
+            };
 
             dbg!(json_str_ref);
             let status = match json_str_ref {
                 constants::SEND_COMMAND => {
-                    let wu_message: WrapperUMessage =
-                        serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
+                    let wu_message: WrapperUMessage = match serde_json::from_value(json_data_value)
+                    {
+                        Ok(message) => message,
+                        Err(err) => {
+                            error!("not able to deserialize send UMessage from Json{}", err);
+                            continue;
+                        }
+                    };
+
                     let u_message = wu_message.0;
                     action_str = constants::SEND_COMMAND;
-                    self.utransport.send(u_message).await
+                    utransport.send(u_message).await
                 }
 
                 constants::REGISTER_LISTENER_COMMAND => {
-                    let cloned_listener = Arc::clone(&arc_self);
-
-                    let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
+                    let wu_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
+                        Ok(message) => message,
+                        Err(err) => {
+                            error!(
+                                "not able to deserialize register listener UURI from Json{}",
+                                err
+                            );
+                            continue;
+                        }
+                    };
                     let u_uuri = wu_uuri.0;
                     action_str = constants::REGISTER_LISTENER_COMMAND;
-                    self.utransport
-                        .register_listener(
-                            u_uuri,
-                           //Arc::clone(&cloned_listener) as Arc<dyn UListener>,
-                           &cloned_listener as Arc<dyn UListener>,
-                         
-                        )
+                    utransport
+                        .register_listener(u_uuri, Arc::clone(&self.clone().listener))
                         .await
                 }
 
                 constants::UNREGISTER_LISTENER_COMMAND => {
-                    let cloned_listener = Arc::clone(&arc_self);
-                    let wu_uuri: WrapperUUri = serde_json::from_value(json_data_value).unwrap(); // convert json to UMessage
+                    let wu_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
+                        Ok(message) => message,
+                        Err(err) => {
+                            error!(
+                                "not able to deserialize register listener UURI from Json{}",
+                                err
+                            );
+                            continue;
+                        }
+                    };
+
                     let u_uuri = wu_uuri.0;
                     action_str = constants::UNREGISTER_LISTENER_COMMAND;
-                    self.utransport
-                        .unregister_listener(
-                            u_uuri,
-                            Arc::clone(&cloned_listener) as Arc<dyn UListener>, /*&cloned_listener*/
-                        )
+                    utransport
+                        .unregister_listener(u_uuri, Arc::clone(&self.clone().listener))
                         .await
                 }
 
@@ -259,11 +294,7 @@ impl SocketTestAgent {
                 test_id: test_id.to_string(),
             };
 
-
-            self.send_to_tm(json_message).await;
-            // <SocketTestAgent as Clone>::clone(self)
-            //     .send_to_tm(json_message)
-            //     .await;
+            self.clone().send_to_tm(json_message).await;
         }
         self.close_connection();
     }
@@ -275,24 +306,32 @@ impl SocketTestAgent {
         dbg!("Sending SDK name to Test Manager!");
         let message = sdk_init.as_bytes();
 
-        let socket_clone = self.clientsocket.clone();
-        let _ = socket_clone
-            .lock()
-            .expect("error in sending data to TM")
-            .write_all(message);
-        //todo: handle result
+        let Ok(mut socket) = self.clientsocket.try_lock() else {
+            error!("faile to aquire lock for sending init message to TM ");
+            return;
+        };
+
+        let result = socket.write_all(message);
+        match result {
+            Ok(()) => println!("on receive could send init to TM"),
+            Err(err) => error!("on receive could not send init to TM{}", err),
+        }
     }
 
     async fn send_to_tm(self, json_message: JsonResponseData) {
         let json_message_str = convert_json_to_jsonstring(&json_message);
         let message = json_message_str.as_bytes();
 
-        let socket_clone = self.clientsocket_to_tm.clone();
-        let _ = socket_clone
-            .try_lock()
-            .expect("error in sending data to TM")
-            .write_all(message);
-        //todo:handle result
+        let Ok(mut socket) = self.clientsocket.try_lock() else {
+            error!("faile to aquire lock for sending init message to TM ");
+            return;
+        };
+
+        let result = socket.write_all(message);
+        match result {
+            Ok(()) => println!("on receive could send init to TM"),
+            Err(err) => error!("on receive could not send init to TM{}", err),
+        }
     }
     pub fn close_connection(&self) {
         todo!();

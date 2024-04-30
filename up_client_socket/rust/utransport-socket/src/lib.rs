@@ -44,7 +44,7 @@
  use tokio::task;
  use up_rust::ComparableListener;
  use log::error;
- 
+ //#[derive(Clone)]
  pub struct UTransportSocket {
      socket_sync: TcpStream,
      listener_map: Arc<Mutex<HashMap<UUri, HashSet<ComparableListener>>>>,
