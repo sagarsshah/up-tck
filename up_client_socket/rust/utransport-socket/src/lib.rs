@@ -106,7 +106,7 @@
        
         Ok( UTransportSocket {
              socket_sync,
-             listener_map: Arc::new(Mutex::new(HashMap::new())),
+             listener_map,
          })
      }
  
@@ -135,6 +135,7 @@
     return Ok(());
 }
     async  fn dispatcher_listener(&mut self) {
+        dbg!("started listener for dispatcher");
          loop {
              // Receive data from the socket
              let mut buffer: [u8; BYTES_MSG_LENGTH] = [0; BYTES_MSG_LENGTH];
@@ -167,12 +168,12 @@
              {
                  UMessageType::UMESSAGE_TYPE_PUBLISH => {
                      dbg!("calling handle publish....");
-                     let _ = self.check_all_listeners(&umessage.attributes.source, &umessage);
+                     let _ = self.check_all_listeners(&umessage.attributes.source.clone(), umessage);
                  }
                  UMessageType::UMESSAGE_TYPE_NOTIFICATION => todo!(),
                  UMessageType::UMESSAGE_TYPE_UNSPECIFIED | UMessageType::UMESSAGE_TYPE_RESPONSE => (),
                  UMessageType::UMESSAGE_TYPE_REQUEST => {
-                    match self.check_all_listeners(&umessage.attributes.sink, &umessage){
+                    match self.check_all_listeners(&umessage.attributes.sink.clone(), umessage){
                         Ok(_) => {
                             // The function call succeeded
                             dbg!("All listeners checked successfully");
@@ -195,7 +196,7 @@
      /// # Errors
      ///
      /// Will return `Err` if no listeners registered for topic
-     pub fn check_all_listeners(&self, uuri: &UUri, umessage: &UMessage) -> Result<(), UStatus> {
+     pub fn check_all_listeners(&self, uuri: &UUri, umessage: UMessage) -> Result<(), UStatus> {
          //let mut topics_listeners = self.listener_map.lock().unwrap();
 
          let mut topics_listeners = match self.listener_map.lock() {
@@ -207,11 +208,13 @@
                 
             }
         };
+       
+       
          let listeners = topics_listeners.entry(uuri.clone());
-         dbg!("check_all_listeners..\n");
+      
          match listeners {
              Entry::Vacant(_) => {
-                 dbg!("check_all_listeners 1..\n");
+                dbg!("......vacant");                 
                  return Err(UStatus::fail_with_code(
                      UCode::NOT_FOUND,
                      format!("No listeners registered for topic: {:?}", &uuri),
@@ -219,7 +222,7 @@
              }
              Entry::Occupied(mut e) => {
                  let occupied = e.get_mut();
-                 dbg!("check_all_listeners 2..\n");
+                 dbg!("......occupied");  
                  if occupied.is_empty() {
                      return Err(UStatus::fail_with_code(
                          UCode::NOT_FOUND,
@@ -230,8 +233,12 @@
                  for listener in occupied.iter() {
                      let task_listener = listener.clone();
                      let task_umessage = umessage.clone();
+                  //   dbg!("invoking listner on error\n");
+                   //  task::spawn(async move { task_listener.on_error(UStatus::ok()).await });
+                 //    let task_listener = listener.clone();
                      dbg!("invoking listner on receive\n");
                      task::spawn(async move { task_listener.on_receive(task_umessage).await });
+                     dbg!("invoking listner on receive....\n");
                  }
              }
          }
@@ -272,11 +279,7 @@
             
          };
  
-        //  let umsg_serialized = message
-        //      .clone()
-        //      .write_to_bytes()
-        //      .expect("Send Serialization Issue");
-
+    
         let umsg_serialized_result = message.clone().write_to_bytes();
 let umsg_serialized = match umsg_serialized_result {
     Ok(serialized) => serialized,
@@ -446,13 +449,16 @@ let umsg_serialized = match umsg_serialized_result {
                 };
 
 
-
+              
                  let listeners = topics_listeners.entry(topic).or_default();
                  let identified_listener = ComparableListener::new(listener);
                  let inserted = listeners.insert(identified_listener); 
+                 dbg!(inserted);
                  return if inserted {
+                  
                     Ok(())
                 } else {
+            
                     Err(UStatus::fail_with_code(
                         UCode::ALREADY_EXISTS,
                         "UUri + UListener pair already exists!",
@@ -490,19 +496,25 @@ let umsg_serialized = match umsg_serialized_result {
             }
         };
          let listeners = topics_listeners.entry(topic.clone());
+      
          return match listeners {
-             Entry::Vacant(_) => Err(UStatus::fail_with_code(
+             Entry::Vacant(_) =>     
+             Err(UStatus::fail_with_code(
                  UCode::NOT_FOUND,
                  format!("No listeners registered for topic: {:?}", &topic),
              )),
              Entry::Occupied(mut e) => {
+
                  let occupied = e.get_mut();
                  let identified_listener = ComparableListener::new(listener);
                  let removed = occupied.remove(&identified_listener);
- 
+                 dbg!("topic found Occupied");
+                 dbg!(removed);
                  if removed {
+                    
                      Ok(())
                  } else {
+                    
                      Err(UStatus::fail_with_code(
                          UCode::NOT_FOUND,
                          "UUri + UListener not found!",

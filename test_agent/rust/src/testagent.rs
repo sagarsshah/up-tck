@@ -25,7 +25,6 @@
 use async_trait::async_trait;
 use log::error;
 use serde_json::Value;
-use tokio::io::AsyncReadExt;
 use up_rust::{Data, UCode, UListener};
 use up_rust::{UMessage, UStatus, UTransport};
 
@@ -41,7 +40,7 @@ use crate::constants::SDK_INIT_MESSAGE;
 use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
 use crate::{constants, utils, UTransportSocket};
 use std::net::TcpStream;
-use tokio::net::TcpStream as TCPStremAsync;
+
 
 use self::utils::sanitize_input_string;
 
@@ -69,10 +68,18 @@ impl FooListener {
     }
 }
 
+
+
+
+
 #[async_trait]
 impl UListener for FooListener {
-    async fn on_receive(&self, msg: UMessage /*, testAgentHandler: SocketTestAgent*/) {
+
+
+    async fn on_receive(&self, msg: UMessage) {
+ 
         dbg!("OnReceive called");
+        dbg!(msg.clone());
 
         let data_payload = match &msg.payload.data {
             Some(data) => {
@@ -134,7 +141,8 @@ impl UListener for FooListener {
     }
 
     async fn on_error(&self, _err: UStatus) {
-        todo!();
+
+        dbg!(_err);
     }
 }
 
@@ -153,13 +161,7 @@ impl SocketTestAgent {
         utransport: UTransportSocket,
         ta_to_tm_socket: TcpStream,
     ) {
-        let Ok(ta_to_tm_socket_clone) = ta_to_tm_socket.try_clone() else {
-            error!("Socket cloning failed for ta to tm socket clone. exiting as fail to inform TM");
-
-            return;
-        };
-
-        self.clone().inform_tm_ta_starting(ta_to_tm_socket_clone);
+        self.clone().inform_tm_ta_starting();
 
         let tmp_socket = self.clientsocket.clone();
 
@@ -170,15 +172,15 @@ impl SocketTestAgent {
         dbg!("start the loop: to receive data");
         loop {
             let mut recv_data = [0; 2048];
-            dbg!("wait for data");
-            let bytes_received = match socket.read(&mut recv_data){
+
+            let bytes_received = match socket.read(&mut recv_data) {
                 Ok(bytes_received) => bytes_received,
                 Err(e) => {
                     dbg!("Socket error: {}", e);
                     break;
                 }
             };
-            dbg!("received data: {}", bytes_received.clone());
+
             if bytes_received == 0 {
                 continue;
             }
@@ -330,7 +332,7 @@ impl SocketTestAgent {
         self.close_connection();
     }
 
-    fn inform_tm_ta_starting(self, mut ta_to_tm_socket: TcpStream) {
+    fn inform_tm_ta_starting(self) {
         let sdk_init = SDK_INIT_MESSAGE;
 
         //inform TM that rust TA is running

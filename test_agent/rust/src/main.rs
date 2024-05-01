@@ -38,7 +38,6 @@ mod testagent;
 use log::error;
 use std::net::TcpStream; //as TcpStreamSync;
 use tokio::runtime::Runtime;
-use tokio::net::TcpStream as TCPStremAsync;
 
 fn main() {
     let handle = thread::spawn(|| {
@@ -48,8 +47,6 @@ fn main() {
             return;
         };
 
-
-            
         let test_agent = match TcpStream::connect(TEST_MANAGER_ADDR) {
             Ok(socket) => socket,
             Err(err) => {
@@ -57,7 +54,7 @@ fn main() {
 
                 return;
             }
-        }; 
+        };
 
         let ta_to_tm_socket = match TcpStream::connect(TEST_MANAGER_ADDR) {
             Ok(socket) => socket,
@@ -80,7 +77,6 @@ fn main() {
         rt.block_on(async {
             // Spawn a Tokio task to connect to TEST_MANAGER_ADDR asynchronously
 
-       
             let u_transport = match UTransportSocket::new() {
                 Ok(socket) => {
                     // The function call succeeded
