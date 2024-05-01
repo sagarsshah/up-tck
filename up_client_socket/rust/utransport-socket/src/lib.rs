@@ -49,19 +49,6 @@
      socket_sync: TcpStream,
      listener_map: Arc<Mutex<HashMap<UUri, HashSet<ComparableListener>>>>,
  }
-//  impl Clone for UTransportSocket {
-//      fn clone(&self) -> Self {
-//          UTransportSocket {
-//              socket_sync: self
-//                  .socket_sync
-//                  .try_clone()
-//                  .expect("issue in cloning sync socket"),
-//              //  listener_map: self.listener_map.clone(),
-//              listener_map: self.listener_map.clone(),
-//          }
-//      }
-//  }
- 
  
  impl UTransportSocket {
      #[must_use]
@@ -232,13 +219,15 @@
                  dbg!("invoking listner on receive..\n");
                  for listener in occupied.iter() {
                      let task_listener = listener.clone();
+                     let task_listener_error = listener.clone();
                      let task_umessage = umessage.clone();
-                  //   dbg!("invoking listner on error\n");
-                   //  task::spawn(async move { task_listener.on_error(UStatus::ok()).await });
-                 //    let task_listener = listener.clone();
+                 
                      dbg!("invoking listner on receive\n");
                      task::spawn(async move { task_listener.on_receive(task_umessage).await });
                      dbg!("invoking listner on receive....\n");
+                     dbg!("invoking listner on error\n");
+                     task::spawn(async move { task_listener_error.on_error(UStatus::ok()).await });
+               
                  }
              }
          }

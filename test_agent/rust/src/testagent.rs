@@ -41,7 +41,6 @@ use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
 use crate::{constants, utils, UTransportSocket};
 use std::net::TcpStream;
 
-
 use self::utils::sanitize_input_string;
 
 #[derive(Serialize)]
@@ -68,18 +67,11 @@ impl FooListener {
     }
 }
 
-
-
-
-
 #[async_trait]
 impl UListener for FooListener {
-
-
     async fn on_receive(&self, msg: UMessage) {
- 
         dbg!("OnReceive called");
-        dbg!(msg.clone());
+        // dbg!(msg.clone());
 
         let data_payload = match &msg.payload.data {
             Some(data) => {
@@ -141,7 +133,6 @@ impl UListener for FooListener {
     }
 
     async fn on_error(&self, _err: UStatus) {
-
         dbg!(_err);
     }
 }
@@ -162,7 +153,6 @@ impl SocketTestAgent {
         ta_to_tm_socket: TcpStream,
     ) {
         self.clone().inform_tm_ta_starting();
-
         let tmp_socket = self.clientsocket.clone();
 
         let Ok(mut socket) = tmp_socket.lock() else {
