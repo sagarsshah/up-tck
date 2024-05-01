@@ -71,7 +71,6 @@ impl FooListener {
 impl UListener for FooListener {
     async fn on_receive(&self, msg: UMessage) {
         dbg!("OnReceive called");
-        // dbg!(msg.clone());
 
         let data_payload = match &msg.payload.data {
             Some(data) => {
@@ -91,31 +90,37 @@ impl UListener for FooListener {
             }
         };
 
-        let mut value: HashMap<String, String> = HashMap::new();
-        value.insert("value".into(), data_payload);
-        let Ok(value_str) = serde_json::to_string(&value) else {
-            error!("issue in converting to payload");
+        let Ok(value_str) = serde_json::to_string(
+            &[("value".to_string(), data_payload.to_string())]
+                .iter()
+                .cloned()
+                .collect::<HashMap<_, _>>(),
+        ) else {
+            error!("Issue in converting to payload");
             return;
         };
 
-        let mut payload: HashMap<String, String> = HashMap::new();
-        payload.insert("payload".into(), value_str);
-        let Ok(payload_str) = serde_json::to_string(&payload) else {
-            error!("issue in converting to payload");
+        let Ok(payload_str) = serde_json::to_string(
+            &[("payload".to_string(), value_str.to_string())]
+                .iter()
+                .cloned()
+                .collect::<HashMap<_, _>>(),
+        ) else {
+            error!("Issue in converting to payload");
             return;
         };
 
-        let mut json_message = JsonResponseData {
+        let data = [("data".to_string(), payload_str.to_string())]
+            .iter()
+            .cloned()
+            .collect::<HashMap<_, _>>();
+        let json_message = JsonResponseData {
             action: constants::RESPONSE_ON_RECEIVE.to_owned(),
-            data: HashMap::new(),
+            data,
             ue: "rust".to_string(),
             test_id: "1".to_string(),
         };
 
-        json_message.data.insert("data".into(), payload_str);
-
-        //todo: revisit this and check:Better pattern might be to have the UListener be impled on a different struct
-        //e.g. SocketTestListener that then holds an Arc<Mutex<SocketTestAgent>> to be able to call send_to_tm() on that instead.
         dbg!("sending received data to tm....");
         let json_message_str = convert_json_to_jsonstring(&json_message);
         let message = json_message_str.as_bytes();
