@@ -58,17 +58,16 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             UAuthority::default()
         };
 
-        let mut uuri: UUri = UUri::new();
-        //  let mut entity = UEntity::new();
-        let mut resource = UResource::new();
+        //let mut uuri: UUri = UUri::new();
+   
 
-        //    let  resource =  if let Ok(resource) = parse_uresource(&value) {
-        //     resource
-        // } else {
-        //     let err_msg = "Error parsing entity: ".to_string();
-        //     error!("{}", err_msg);
-        //     UResource::default()
-        // };
+           let  resource =  if let Ok(resource) = parse_uresource(&value) {
+            resource
+        } else {
+            let err_msg = "Error parsing entity: ".to_string();
+            error!("{}", err_msg);
+            UResource::default()
+        };
         let entity = if let Ok(entity) = parse_uentity(&value) {
             entity
         } else {
@@ -77,117 +76,79 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             UEntity::default()
         };
 
-        if let Some(resource_value) = value
-            .get("resource")
-            .and_then(|resource_value| resource_value.get("name"))
-            .and_then(|resource_value| resource_value.as_str())
-        {
-            resource.name = resource_value.to_owned();
-        } else {
-            error!("Error: Name field is not a string in resource");
-        };
 
-        if let Some(resource_value) = value
-            .get("resource")
-            .and_then(|resource_value| resource_value.get("instance"))
-            .and_then(|resource_value| resource_value.as_str())
-        {
-            resource.instance = Some(resource_value.to_owned());
-        } else {
-            error!("Error: instance field is not a string in resource");
-        }
-
-        if let Some(resource_value) = value
-            .get("resource")
-            .and_then(|resource_value| resource_value.get("message"))
-            .and_then(|resource_value| resource_value.as_str())
-        {
-            resource.message = Some(resource_value.to_owned());
-        } else {
-            error!("Error: message field is not a string in resource_value");
-        };
-
-        if let Some(resource_value) = value
-            .get("resource")
-            .and_then(|resource_value| resource_value.get("id"))
-            .and_then(|resource_value| resource_value.as_str())
-        {
-            if let Ok(parsed_id) = resource_value.parse::<u32>() {
-                resource.id = Some(parsed_id);
-            } else {
-                error!("Error: id field parsing to u32");
+        let uuri = if !(authority.get_name().is_none() && authority.number.is_none()) {
+            dbg!(" authority is not default");
+            UUri {
+                authority: MessageField(Some(Box::new(authority))),
+                entity: MessageField(Some(Box::new(entity))),
+                resource: MessageField(Some(Box::new(resource))),
+                ..Default::default()
             }
         } else {
-            error!("Error: id field is not string");
+            UUri {
+                entity: MessageField(Some(Box::new(entity))),
+                resource: MessageField(Some(Box::new(resource))),
+                ..Default::default() // If authority is default, fill in the rest with default values
+            }
         };
-
-        if !(authority.get_name().is_none() && authority.number.is_none()) {
-            dbg!(" authority is not default");
-            uuri.authority = MessageField(Some(Box::new(authority)));
-        }
-        uuri.entity = MessageField(Some(Box::new(entity)));
-        uuri.resource = MessageField(Some(Box::new(resource)));
 
         Ok(WrapperUUri(uuri))
     }
 }
 
 fn parse_uresource(value: &Value) -> Result<UResource, serde_json::Error> {
-    let name = if let Some(resource_value) = value
+
+    let mut uresource = UResource::new();
+        if let Some(resource_value) = value
         .get("resource")
         .and_then(|resource_value| resource_value.get("name"))
         .and_then(|resource_value| resource_value.as_str())
     {
-        resource_value.to_owned()
+        uresource.name = resource_value.to_owned();
     } else {
         error!("Error: name field is not a string in resource");
-        "None".to_owned()
+      
     };
 
-    let instance = if let Some(resource_value) = value
+    if let Some(resource_value) = value
         .get("resource")
         .and_then(|resource_value| resource_value.get("instance"))
         .and_then(|resource_value| resource_value.as_str())
     {
-        Some(resource_value.to_owned())
+        uresource.instance =  Some(resource_value.to_owned());
     } else {
         error!("Error: instance field is not a string in resource");
-        Some("None".to_owned())
+        //Some("None".to_owned())
     };
 
-    let message = if let Some(resource_value) = value
+   if let Some(resource_value) = value
         .get("resource")
         .and_then(|resource_value| resource_value.get("message"))
         .and_then(|resource_value| resource_value.as_str())
     {
-        Some(resource_value.to_owned())
+     uresource.message =    Some(resource_value.to_owned());
     } else {
         error!("Error: message field is not a string in resource_value");
-        Some("None".to_owned())
+        //Some("None".to_owned())
     };
 
-    let id = if let Some(resource_value) = value
+    if let Some(resource_value) = value
         .get("resource")
         .and_then(|resource_value| resource_value.get("id"))
         .and_then(|resource_value| resource_value.as_str())
     {
         if let Ok(parsed_id) = resource_value.parse::<u32>() {
-            Some(parsed_id)
+          uresource.id =  Some(parsed_id);
         } else {
             error!("Error: id field parsing to u32");
-            Some(0)
+           // Some(0)
         }
     } else {
         error!("Error: id field is not string");
-        Some(0)
+        //Some(0)
     };
-    Ok(UResource {
-        name,
-        instance,
-        message,
-        id,
-        special_fields: SpecialFields::default(),
-    })
+    Ok(uresource)
 }
 
 fn parse_string_field(value: &Value, field: &str) -> Result<String, serde_json::Error> {
