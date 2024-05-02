@@ -57,10 +57,10 @@ pub struct SocketTestAgent {
     listener: Arc<dyn UListener>,
 }
 #[derive(Clone)]
-pub struct FooListener {
+pub struct ListenerHandlers {
     clientsocket_to_tm: Arc<Mutex<TcpStream>>,
 }
-impl FooListener {
+impl ListenerHandlers {
     pub fn new(test_clientsocket_to_tm: TcpStream) -> Self {
         let clientsocket_to_tm = Arc::new(Mutex::new(test_clientsocket_to_tm));
         Self { clientsocket_to_tm }
@@ -68,7 +68,7 @@ impl FooListener {
 }
 
 #[async_trait]
-impl UListener for FooListener {
+impl UListener for ListenerHandlers {
     async fn on_receive(&self, msg: UMessage) {
         dbg!("OnReceive called");
 

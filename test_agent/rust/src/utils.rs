@@ -58,8 +58,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             UAuthority::default()
         };
 
-        //let mut uuri: UUri = UUri::new();
-   
+         
 
            let  resource =  if let Ok(resource) = parse_uresource(&value) {
             resource

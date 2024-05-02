@@ -32,7 +32,7 @@ mod utils;
 use std::{sync::Arc, thread};
 
 use crate::constants::TEST_MANAGER_ADDR;
-use testagent::{FooListener, SocketTestAgent};
+use testagent::{ListenerHandlers, SocketTestAgent};
 use utransport_socket::UTransportSocket;
 mod testagent;
 use log::error;
@@ -90,7 +90,7 @@ use tokio::runtime::Runtime;
 //                 }
 //             };
 
-//             let foo_listener = Arc::new(FooListener::new(foo_listner_socket_to_tm));
+//             let foo_listener = Arc::new(ListenerHandlers::new(foo_listner_socket_to_tm));
 //             let agent = SocketTestAgent::new(test_agent, foo_listener);
 //             //agent.clone().receive_from_tm().await;
 //             agent
@@ -122,7 +122,7 @@ async fn connect_and_receive() -> Result<(), Box<dyn std::error::Error>> {
     let u_transport = UTransportSocket::new()?;
     dbg!("Socket transport created successfully");
 
-    let foo_listener = Arc::new(FooListener::new(foo_listener_socket_to_tm));
+    let foo_listener = Arc::new(ListenerHandlers::new(foo_listener_socket_to_tm));
     let agent = SocketTestAgent::new(test_agent, foo_listener);
     agent
         .clone()
