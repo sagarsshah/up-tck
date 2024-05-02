@@ -58,7 +58,7 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             UAuthority::default()
         };
 
-   
+         
 
         let resource = parse_uresource(&value);
         let entity = parse_uentity(&value);
