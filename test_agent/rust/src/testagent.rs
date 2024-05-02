@@ -205,7 +205,7 @@ impl SocketTestAgent {
             dbg!(json_str_ref);
             let status = match json_str_ref {
                 constants::SEND_COMMAND => {
-                    let wu_message: WrapperUMessage = match serde_json::from_value(json_data_value)
+                    let wrapperu_message: WrapperUMessage = match serde_json::from_value(json_data_value)
                     {
                         Ok(message) => message,
                         Err(err) => {
@@ -214,13 +214,13 @@ impl SocketTestAgent {
                         }
                     };
 
-                    let u_message = wu_message.0;
+                    let u_message = wrapperu_message.0;
                     action_str = constants::SEND_COMMAND;
                     utransport.send(u_message).await
                 }
 
                 constants::REGISTER_LISTENER_COMMAND => {
-                    let wu_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
+                    let wrapper_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
                         Ok(message) => message,
                         Err(err) => {
                             error!(
@@ -230,7 +230,7 @@ impl SocketTestAgent {
                             continue;
                         }
                     };
-                    let u_uuri = wu_uuri.0;
+                    let u_uuri = wrapper_uuri.0;
                     action_str = constants::REGISTER_LISTENER_COMMAND;
                     utransport
                         .register_listener(u_uuri, Arc::clone(&self.clone().listener))
@@ -238,7 +238,7 @@ impl SocketTestAgent {
                 }
 
                 constants::UNREGISTER_LISTENER_COMMAND => {
-                    let wu_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
+                    let wrapper_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
                         Ok(message) => message,
                         Err(err) => {
                             error!(
@@ -249,7 +249,7 @@ impl SocketTestAgent {
                         }
                     };
 
-                    let u_uuri = wu_uuri.0;
+                    let u_uuri = wrapper_uuri.0;
                     action_str = constants::UNREGISTER_LISTENER_COMMAND;
                     utransport
                         .unregister_listener(u_uuri, Arc::clone(&self.clone().listener))

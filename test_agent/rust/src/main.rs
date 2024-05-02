@@ -104,7 +104,7 @@ use tokio::runtime::Runtime;
 // }
 
 fn connect_to_socket(addr: &str, port: u16) -> Result<TcpStream, Box<dyn std::error::Error>> {
-    let socket_addr = format!("{}:{}", addr, port);
+    let socket_addr = format!("{addr}:{port}");
     match TcpStream::connect(socket_addr) {
         Ok(socket) => Ok(socket),
         Err(err) => {
@@ -137,8 +137,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let handle = thread::spawn(|| {
         let rt = Runtime::new().expect("Error creating runtime");
         match rt.block_on(connect_and_receive()) {
-            Ok(_) => (),
-            Err(err) => eprintln!("Error occurred: {}", err),
+            Ok(()) => (),
+            Err(err) => eprintln!("Error occurred: {err}"),
         };
     });
 

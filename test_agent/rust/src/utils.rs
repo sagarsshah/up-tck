@@ -58,26 +58,18 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             UAuthority::default()
         };
 
-        //let mut uuri: UUri = UUri::new();
    
 
-           let  resource =  if let Ok(resource) = parse_uresource(&value) {
-            resource
-        } else {
-            let err_msg = "Error parsing entity: ".to_string();
-            error!("{}", err_msg);
-            UResource::default()
-        };
-        let entity = if let Ok(entity) = parse_uentity(&value) {
-            entity
-        } else {
-            let err_msg = "Error parsing entity: ".to_string();
-            error!("{}", err_msg);
-            UEntity::default()
-        };
+        let resource = parse_uresource(&value);
+        let entity = parse_uentity(&value);
 
-
-        let uuri = if !(authority.get_name().is_none() && authority.number.is_none()) {
+        let uuri = if authority.get_name().is_none() && authority.number.is_none() {
+            UUri {
+                entity: MessageField(Some(Box::new(entity))),
+                resource: MessageField(Some(Box::new(resource))),
+                ..Default::default() // If authority is default, fill in the rest with default values
+            }
+        } else {
             dbg!(" authority is not default");
             UUri {
                 authority: MessageField(Some(Box::new(authority))),
@@ -85,19 +77,13 @@ impl<'de> Deserialize<'de> for WrapperUUri {
                 resource: MessageField(Some(Box::new(resource))),
                 ..Default::default()
             }
-        } else {
-            UUri {
-                entity: MessageField(Some(Box::new(entity))),
-                resource: MessageField(Some(Box::new(resource))),
-                ..Default::default() // If authority is default, fill in the rest with default values
-            }
         };
 
         Ok(WrapperUUri(uuri))
     }
 }
 
-fn parse_uresource(value: &Value) -> Result<UResource, serde_json::Error> {
+fn parse_uresource(value: &Value) -> UResource {
 
     let mut uresource = UResource::new();
         if let Some(resource_value) = value
@@ -148,7 +134,7 @@ fn parse_uresource(value: &Value) -> Result<UResource, serde_json::Error> {
         error!("Error: id field is not string");
         //Some(0)
     };
-    Ok(uresource)
+    uresource
 }
 
 fn parse_string_field(value: &Value, field: &str) -> Result<String, serde_json::Error> {
@@ -159,10 +145,9 @@ fn parse_string_field(value: &Value, field: &str) -> Result<String, serde_json::
     {
         Ok(entity_value.to_owned())
     } else {
-        error!("Error: {} field is not a string", field);
+        error!("Error: {field} field is not a string");
         Err(serde::de::Error::custom(format!(
-            "Error: {} field is not a string",
-            field
+            "Error: {field} field is not a string"
         )))
     }
 }
@@ -176,23 +161,20 @@ fn parse_u32_field(value: &Value, field: &str) -> Result<Option<u32>, serde_json
         if let Ok(parsed_value) = entity_value.parse::<u32>() {
             Ok(Some(parsed_value))
         } else {
-            error!("Error: {} is not a number", field);
+            error!("Error: {field} is not a number");
             Err(serde::de::Error::custom(format!(
-                "Error: {} is not a number",
-                field
+                "Error: {field} is not a number"
             )))
         }
     } else {
         error!("Error: {} field is not a string", field);
         Err(serde::de::Error::custom(format!(
-            "Error: {} field is not a string",
-            field
+            "Error: {field} field is not a string"
         )))
     }
 }
 
-fn parse_uentity(value: &Value) -> Result<UEntity, serde_json::Error> {
-    //fn parse_uentity(value: &Value) -> UEntity {
+fn parse_uentity(value: &Value) -> UEntity {
     let name = match parse_string_field(value, "name") {
         Ok(value) => value,
         Err(_) => "None".to_owned(),
@@ -213,13 +195,13 @@ fn parse_uentity(value: &Value) -> Result<UEntity, serde_json::Error> {
         Err(_) => None,
     };
 
-    Ok(UEntity {
+    UEntity {
         name,
         id,
         version_major,
         version_minor,
         special_fields: SpecialFields::default(),
-    })
+    }
 }
 
 fn parse_uauthority(value: &Value) -> Result<UAuthority, serde_json::Error> {
