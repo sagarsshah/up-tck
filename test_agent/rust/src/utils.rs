@@ -58,12 +58,18 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             UAuthority::default()
         };
 
-        
-    
         let mut uuri: UUri = UUri::new();
-      //  let mut entity = UEntity::new();
+        //  let mut entity = UEntity::new();
         let mut resource = UResource::new();
-        let  entity =  if let Ok(entity) = parse_uentity(&value) {
+
+        //    let  resource =  if let Ok(resource) = parse_uresource(&value) {
+        //     resource
+        // } else {
+        //     let err_msg = "Error parsing entity: ".to_string();
+        //     error!("{}", err_msg);
+        //     UResource::default()
+        // };
+        let entity = if let Ok(entity) = parse_uentity(&value) {
             entity
         } else {
             let err_msg = "Error parsing entity: ".to_string();
@@ -126,6 +132,63 @@ impl<'de> Deserialize<'de> for WrapperUUri {
     }
 }
 
+fn parse_uresource(value: &Value) -> Result<UResource, serde_json::Error> {
+    let name = if let Some(resource_value) = value
+        .get("resource")
+        .and_then(|resource_value| resource_value.get("name"))
+        .and_then(|resource_value| resource_value.as_str())
+    {
+        resource_value.to_owned()
+    } else {
+        error!("Error: name field is not a string in resource");
+        "None".to_owned()
+    };
+
+    let instance = if let Some(resource_value) = value
+        .get("resource")
+        .and_then(|resource_value| resource_value.get("instance"))
+        .and_then(|resource_value| resource_value.as_str())
+    {
+        Some(resource_value.to_owned())
+    } else {
+        error!("Error: instance field is not a string in resource");
+        Some("None".to_owned())
+    };
+
+    let message = if let Some(resource_value) = value
+        .get("resource")
+        .and_then(|resource_value| resource_value.get("message"))
+        .and_then(|resource_value| resource_value.as_str())
+    {
+        Some(resource_value.to_owned())
+    } else {
+        error!("Error: message field is not a string in resource_value");
+        Some("None".to_owned())
+    };
+
+    let id = if let Some(resource_value) = value
+        .get("resource")
+        .and_then(|resource_value| resource_value.get("id"))
+        .and_then(|resource_value| resource_value.as_str())
+    {
+        if let Ok(parsed_id) = resource_value.parse::<u32>() {
+            Some(parsed_id)
+        } else {
+            error!("Error: id field parsing to u32");
+            Some(0)
+        }
+    } else {
+        error!("Error: id field is not string");
+        Some(0)
+    };
+    Ok(UResource {
+        name,
+        instance,
+        message,
+        id,
+        special_fields: SpecialFields::default(),
+    })
+}
 
 fn parse_string_field(value: &Value, field: &str) -> Result<String, serde_json::Error> {
     if let Some(entity_value) = value
@@ -136,7 +199,10 @@ fn parse_string_field(value: &Value, field: &str) -> Result<String, serde_json::
         Ok(entity_value.to_owned())
     } else {
         error!("Error: {} field is not a string", field);
-        Err(serde::de::Error::custom(format!("Error: {} field is not a string", field)))
+        Err(serde::de::Error::custom(format!(
+            "Error: {} field is not a string",
+            field
+        )))
     }
 }
 
@@ -150,16 +216,22 @@ fn parse_u32_field(value: &Value, field: &str) -> Result<Option<u32>, serde_json
             Ok(Some(parsed_value))
         } else {
             error!("Error: {} is not a number", field);
-            Err(serde::de::Error::custom(format!("Error: {} is not a number", field)))
+            Err(serde::de::Error::custom(format!(
+                "Error: {} is not a number",
+                field
+            )))
         }
     } else {
         error!("Error: {} field is not a string", field);
-        Err(serde::de::Error::custom(format!("Error: {} field is not a string", field)))
+        Err(serde::de::Error::custom(format!(
+            "Error: {} field is not a string",
+            field
+        )))
     }
 }
 
 fn parse_uentity(value: &Value) -> Result<UEntity, serde_json::Error> {
-//fn parse_uentity(value: &Value) -> UEntity {
+    //fn parse_uentity(value: &Value) -> UEntity {
     let name = match parse_string_field(value, "name") {
         Ok(value) => value,
         Err(_) => "None".to_owned(),
@@ -187,87 +259,8 @@ fn parse_uentity(value: &Value) -> Result<UEntity, serde_json::Error> {
         version_minor,
         special_fields: SpecialFields::default(),
     })
-
- 
 }
 
-
-
-// fn parse_uentity(value: &Value) -> Result<UEntity, serde_json::Error> {
-
-//     let name = if let Some(entity_value) = value
-//     .get("entity")
-//     .and_then(|entity_value| entity_value.get("name"))
-//     .and_then(|entity_value| entity_value.as_str())
-// {
-//     entity_value.to_owned()
-// } else {
-//     error!("Error: Name field is not a string in entity");
-//     return Err(serde::de::Error::custom("Error: Name field is not a string in entity"));
-// };
-
-// let id = if let Some(entity_value) = value
-//     .get("entity")
-//     .and_then(|entity_value| entity_value.get("id"))
-//     .and_then(|entity_value| entity_value.as_str())
-// {
-//     if let Ok(entity_id_parsed) = entity_value.parse::<u32>() {
-//         Some(entity_id_parsed)
-//     } else {
-//         error!("Error: Not able to parse entity id");
-//         return Err(serde::de::Error::custom("Error: Not able to parse entity id"));
-//     }
-// } else {
-//     error!("Error: entity id filed is not a string");
-//     return Err(serde::de::Error::custom("Error: entity id filed is not a string"));
-// };
-
-// let version_major = if let Some(entity_value) = value.get("entity").and_then(|entity_value| {
-//     entity_value
-//         .get("version_major")
-//         .and_then(|entity_value| entity_value.as_str())
-// }) {
-//     if let Ok(version_major_parsed) = entity_value.parse::<u32>() {
-//         Some(version_major_parsed)
-//     }
-//     else{
-//         error!("Error: entity_value version major is not a number");
-//         return Err(serde::de::Error::custom("Error: entity_value version major is not a number"));
-//     }  
-    
-// } else {
-//     error!("Error: entity_value version major is not a string");
-//     return Err(serde::de::Error::custom("Error: entity_value version major is not a string"));
-// };
-
-// let version_minor = if let Some(entity_value) = value.get("entity").and_then(|entity_value| {
-//     entity_value
-//         .get("version_minor")
-//         .and_then(|entity_value| entity_value.as_str())
-// }) {
-//     if let Ok(version_minor_parsed) = entity_value.parse::<u32>() {
-//         Some(version_minor_parsed)
-//     }else {
-//         error!("Error: entity_value version minor is not a number");
-//         return Err(serde::de::Error::custom("Error: entity_value version minor is not a number"));
-        
-//     }
-// } else {
-//     error!("Error: entity_value version minor is not a string");
-//     return Err(serde::de::Error::custom("Error: entity_value version minor is not a string"));
-// };
-
-
-// Ok(UEntity{
-//     name,
-//     id,
-//     version_major,
-//     version_minor,
-//     special_fields:SpecialFields::default(),
-// })
-
-
-//}
 fn parse_uauthority(value: &Value) -> Result<UAuthority, serde_json::Error> {
     let name = if let Some(authority_value) = value
         .get("authority")
