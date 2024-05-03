@@ -58,8 +58,6 @@ impl<'de> Deserialize<'de> for WrapperUUri {
             UAuthority::default()
         };
 
-         
-
         let resource = parse_uresource(&value);
         let entity = parse_uentity(&value);
 
@@ -84,9 +82,8 @@ impl<'de> Deserialize<'de> for WrapperUUri {
 }
 
 fn parse_uresource(value: &Value) -> UResource {
-
     let mut uresource = UResource::new();
-        if let Some(resource_value) = value
+    if let Some(resource_value) = value
         .get("resource")
         .and_then(|resource_value| resource_value.get("name"))
         .and_then(|resource_value| resource_value.as_str())
@@ -94,7 +91,6 @@ fn parse_uresource(value: &Value) -> UResource {
         uresource.name = resource_value.to_owned();
     } else {
         error!("Error: name field is not a string in resource");
-      
     };
 
     if let Some(resource_value) = value
@@ -102,18 +98,18 @@ fn parse_uresource(value: &Value) -> UResource {
         .and_then(|resource_value| resource_value.get("instance"))
         .and_then(|resource_value| resource_value.as_str())
     {
-        uresource.instance =  Some(resource_value.to_owned());
+        uresource.instance = Some(resource_value.to_owned());
     } else {
         error!("Error: instance field is not a string in resource");
         //Some("None".to_owned())
     };
 
-   if let Some(resource_value) = value
+    if let Some(resource_value) = value
         .get("resource")
         .and_then(|resource_value| resource_value.get("message"))
         .and_then(|resource_value| resource_value.as_str())
     {
-     uresource.message =    Some(resource_value.to_owned());
+        uresource.message = Some(resource_value.to_owned());
     } else {
         error!("Error: message field is not a string in resource_value");
         //Some("None".to_owned())
@@ -125,10 +121,10 @@ fn parse_uresource(value: &Value) -> UResource {
         .and_then(|resource_value| resource_value.as_str())
     {
         if let Ok(parsed_id) = resource_value.parse::<u32>() {
-          uresource.id =  Some(parsed_id);
+            uresource.id = Some(parsed_id);
         } else {
             error!("Error: id field parsing to u32");
-           // Some(0)
+            // Some(0)
         }
     } else {
         error!("Error: id field is not string");
@@ -350,7 +346,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
             error!("Error: traceparent is not a string");
         };
 
-        // special field //todo
+        // special field
         let special_fields = SpecialFields::default();
 
         if special_fields.ne(&SpecialFields::default()) {
@@ -361,9 +357,7 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
     }
 }
 
-// fn parse_uattribute(value: &Value) -> Result<UAttributes, serde_json::Error> {
-// }
-
+#[allow(clippy::similar_names)]
 fn parse_uuid(value: &Value, uuid: &str) -> Result<UUID, serde_json::Error> {
     let get_field = |field: &str| -> Option<u64> {
         value

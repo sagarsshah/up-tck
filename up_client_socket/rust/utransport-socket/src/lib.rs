@@ -157,8 +157,7 @@
                      dbg!("calling handle publish....");
                      let _ = self.check_all_listeners(&umessage.attributes.source.clone(), umessage);
                  }
-                 UMessageType::UMESSAGE_TYPE_NOTIFICATION => todo!(),
-                 UMessageType::UMESSAGE_TYPE_UNSPECIFIED | UMessageType::UMESSAGE_TYPE_RESPONSE => (),
+                 UMessageType::UMESSAGE_TYPE_NOTIFICATION | UMessageType::UMESSAGE_TYPE_UNSPECIFIED | UMessageType::UMESSAGE_TYPE_RESPONSE => (),
                  UMessageType::UMESSAGE_TYPE_REQUEST => {
                     match self.check_all_listeners(&umessage.attributes.sink.clone(), umessage){
                         Ok(_) => {
@@ -184,7 +183,6 @@
      ///
      /// Will return `Err` if no listeners registered for topic
      pub fn check_all_listeners(&self, uuri: &UUri, umessage: UMessage) -> Result<(), UStatus> {
-         //let mut topics_listeners = self.listener_map.lock().unwrap();
 
          let mut topics_listeners = match self.listener_map.lock() {
             Ok(lock) => lock,
@@ -425,8 +423,6 @@
     
                  }
     
-
-               // let mut topics_listeners = self.listener_map.lock().unwrap();
                 let mut topics_listeners = match self.listener_map.lock() {
                     Ok(lock) => lock,
                     Err(err) => {
@@ -474,7 +470,6 @@
          topic: UUri,
          listener: Arc<dyn UListener>,
      ) -> Result<(), UStatus> {
-        // let mut topics_listeners = self.listener_map.lock().unwrap();
          let mut topics_listeners = match self.listener_map.lock() {
             Ok(lock) => lock,
             Err(err) => {

@@ -24,9 +24,6 @@
 
 mod constants;
 
-// #[path = "../../../up_client_socket/rust/u_transport_socket.rs"]
-// pub mod u_transport_socket;
-
 mod utils;
 
 use std::{sync::Arc, thread};
@@ -36,72 +33,8 @@ use testagent::{ListenerHandlers, SocketTestAgent};
 use utransport_socket::UTransportSocket;
 mod testagent;
 use log::error;
-use std::net::TcpStream; //as TcpStreamSync;
+use std::net::TcpStream;
 use tokio::runtime::Runtime;
-
-// fn main() {
-//     let handle = thread::spawn(|| {
-//         // Create a new Tokio runtime
-//         let Ok(rt) = Runtime::new() else {
-//             eprintln!("Error creating runtime");
-//             return;
-//         };
-
-//         let test_agent = match TcpStream::connect(TEST_MANAGER_ADDR) {
-//             Ok(socket) => socket,
-//             Err(err) => {
-//                 error!("Error connecting test agent socket: {}", err);
-
-//                 return;
-//             }
-//         };
-
-//         let ta_to_tm_socket = match TcpStream::connect(TEST_MANAGER_ADDR) {
-//             Ok(socket) => socket,
-//             Err(err) => {
-//                 error!("Error connecting test agent socket: {}", err);
-
-//                 return;
-//             }
-//         };
-
-//         let foo_listner_socket_to_tm = match TcpStream::connect(TEST_MANAGER_ADDR) {
-//             Ok(socket) => socket,
-//             Err(err) => {
-//                 error!("Error connecting foo listner socket: {}", err);
-
-//                 return;
-//             }
-//         };
-
-//         rt.block_on(async {
-//             // Spawn a Tokio task to connect to TEST_MANAGER_ADDR asynchronously
-
-//             let u_transport = match UTransportSocket::new() {
-//                 Ok(socket) => {
-//                     // The function call succeeded
-//                     dbg!("socket trasport create successfully");
-//                     socket
-//                 }
-//                 Err(err) => {
-//                     // The function call failed with an error
-//                     error!("socket trasport create failed: {}", err);
-//                     return;
-//                 }
-//             };
-
-//             let foo_listener = Arc::new(ListenerHandlers::new(foo_listner_socket_to_tm));
-//             let agent = SocketTestAgent::new(test_agent, foo_listener);
-//             //agent.clone().receive_from_tm().await;
-//             agent
-//                 .clone()
-//                 .receive_from_tm(u_transport, ta_to_tm_socket)
-//                 .await;
-//         });
-//     });
-
-//     handle.join().unwrap();
-// }
 
 fn connect_to_socket(addr: &str, port: u16) -> Result<TcpStream, Box<dyn std::error::Error>> {
     let socket_addr = format!("{addr}:{port}");
@@ -142,6 +75,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
     });
 
-    handle.join().unwrap();
+    if let Err(err) = handle.join() {
+        eprintln!("Error joining thread: {err:?}");
+        std::process::exit(1);
+    } else {
+        dbg!("Successfully joined thread");
+    }
     Ok(())
 }

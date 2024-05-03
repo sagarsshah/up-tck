@@ -152,6 +152,73 @@ impl SocketTestAgent {
         }
     }
 
+    async fn handle_send_command(
+        &self,
+        utransport: &UTransportSocket,
+        json_data_value: Value,
+    ) -> Result<(), UStatus> {
+        let wrapperu_message: WrapperUMessage = match serde_json::from_value(json_data_value) {
+            Ok(message) => message,
+            Err(err) => {
+                error!("not able to deserialize send UMessage from Json{}", err);
+                return Err(UStatus::fail_with_code(
+                    UCode::INTERNAL,
+                    "Failed to Deserialize",
+                ));
+            }
+        };
+        let u_message = wrapperu_message.0;
+        utransport.send(u_message).await
+    }
+
+    async fn handle_register_listener_command(
+        &self,
+        utransport: &UTransportSocket,
+        json_data_value: Value,
+    ) -> Result<(), UStatus> {
+        let wrapper_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
+            Ok(message) => message,
+            Err(err) => {
+                error!(
+                    "not able to deserialize register listener UUri from Json{}",
+                    err
+                );
+                return Err(UStatus::fail_with_code(
+                    UCode::INTERNAL,
+                    "Failed to Deserialize",
+                ));
+            }
+        };
+        let u_uuri = wrapper_uuri.0;
+        utransport
+            .register_listener(u_uuri, Arc::clone(&self.clone().listener))
+            .await
+    }
+
+    async fn handle_unregister_listener_command(
+        &self,
+        utransport: &UTransportSocket,
+        json_data_value: Value,
+    ) -> Result<(), UStatus> {
+        let wrapper_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
+            Ok(message) => message,
+            Err(err) => {
+                error!(
+                    "not able to deserialize unregister listener UUri from Json{}",
+                    err
+                );
+                return Err(UStatus::fail_with_code(
+                    UCode::INTERNAL,
+                    "Failed to Deserialize",
+                ));
+            }
+        };
+        let u_uuri = wrapper_uuri.0;
+        utransport
+            .unregister_listener(u_uuri, Arc::clone(&self.clone().listener))
+            .await
+    }
+
     pub async fn receive_from_tm(
         &mut self,
         utransport: UTransportSocket,
@@ -182,7 +249,6 @@ impl SocketTestAgent {
 
             let recv_data_str: std::borrow::Cow<'_, str> =
                 String::from_utf8_lossy(&recv_data[..bytes_received]);
-            let mut action_str = "";
             let cleaned_json_string = sanitize_input_string(&recv_data_str).replace("BYTES:", "");
 
             let json_msg: Value = match serde_json::from_str(&cleaned_json_string.to_string()) {
@@ -202,60 +268,18 @@ impl SocketTestAgent {
                 continue;
             };
 
-            dbg!(json_str_ref);
             let status = match json_str_ref {
                 constants::SEND_COMMAND => {
-                    let wrapperu_message: WrapperUMessage = match serde_json::from_value(json_data_value)
-                    {
-                        Ok(message) => message,
-                        Err(err) => {
-                            error!("not able to deserialize send UMessage from Json{}", err);
-                            continue;
-                        }
-                    };
-
-                    let u_message = wrapperu_message.0;
-                    action_str = constants::SEND_COMMAND;
-                    utransport.send(u_message).await
+                    self.handle_send_command(&utransport, json_data_value).await
                 }
-
                 constants::REGISTER_LISTENER_COMMAND => {
-                    let wrapper_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
-                        Ok(message) => message,
-                        Err(err) => {
-                            error!(
-                                "not able to deserialize register listener UURI from Json{}",
-                                err
-                            );
-                            continue;
-                        }
-                    };
-                    let u_uuri = wrapper_uuri.0;
-                    action_str = constants::REGISTER_LISTENER_COMMAND;
-                    utransport
-                        .register_listener(u_uuri, Arc::clone(&self.clone().listener))
+                    self.handle_register_listener_command(&utransport, json_data_value)
                         .await
                 }
-
                 constants::UNREGISTER_LISTENER_COMMAND => {
-                    let wrapper_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
-                        Ok(message) => message,
-                        Err(err) => {
-                            error!(
-                                "not able to deserialize register listener UURI from Json{}",
-                                err
-                            );
-                            continue;
-                        }
-                    };
-
-                    let u_uuri = wrapper_uuri.0;
-                    action_str = constants::UNREGISTER_LISTENER_COMMAND;
-                    utransport
-                        .unregister_listener(u_uuri, Arc::clone(&self.clone().listener))
+                    self.handle_unregister_listener_command(&utransport, json_data_value)
                         .await
                 }
-
                 _ => Ok(()),
             };
 
@@ -299,20 +323,11 @@ impl SocketTestAgent {
             }
 
             let json_message = JsonResponseData {
-                action: action_str.to_owned(),
+                action: json_str_ref.to_owned(),
                 data: status_dict.clone(),
                 ue: "rust".to_owned(),
                 test_id: test_id.to_string(),
             };
-            //  let ta_to_tm_socket_clone  = ta_to_tm_socket.try_clone().expect("socket cloning failed");
-            //   let ta_to_tm_socket_clone = if let Ok(socket) = ta_to_tm_socket.try_clone() {
-            //     socket
-            // } else {
-
-            //     error!("Socket cloning failed for ta to tm socket clone");
-
-            // continue;
-            // };
 
             let Ok(ta_to_tm_socket_clone) = ta_to_tm_socket.try_clone() else {
                 error!("Socket cloning failed for ta to tm socket clone");
@@ -320,9 +335,16 @@ impl SocketTestAgent {
                 continue;
             };
 
-            self.clone()
-                .send_to_tm(json_message, ta_to_tm_socket_clone)
-                .await;
+            let json_message_str = convert_json_to_jsonstring(&json_message);
+            let message = json_message_str.as_bytes();
+            let result = ta_to_tm_socket_clone
+                .try_clone()
+                .expect("failed")
+                .write_all(message);
+            match result {
+                Ok(()) => println!("on receive could send init to TM"),
+                Err(err) => error!("on receive could not send init to TM{}", err),
+            }
         }
         self.close_connection();
     }
@@ -347,16 +369,23 @@ impl SocketTestAgent {
         }
     }
 
-    async fn send_to_tm(self, json_message: JsonResponseData, mut ta_to_tm_socket: TcpStream) {
-        let json_message_str = convert_json_to_jsonstring(&json_message);
-        let message = json_message_str.as_bytes();
-        let result = ta_to_tm_socket.write_all(message);
-        match result {
-            Ok(()) => println!("on receive could send init to TM"),
-            Err(err) => error!("on receive could not send init to TM{}", err),
-        }
-    }
     pub fn close_connection(&self) {
-        todo!();
+        let tmp_socket = self.clientsocket.clone();
+        let socket = match tmp_socket.lock() {
+            Ok(socket) => socket,
+            Err(err) => {
+                error!("Error accessing client socket: {}", err);
+                return;
+            }
+        };
+
+        match socket.shutdown(std::net::Shutdown::Both) {
+            Ok(()) => {
+                dbg!("Connection closed");
+            }
+            Err(err) => {
+                error!("Error closing connection: {}", err);
+            }
+        }
     }
 }
