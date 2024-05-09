@@ -38,7 +38,7 @@ use serde::Serialize;
 
 use crate::constants::SDK_INIT_MESSAGE;
 use crate::utils::{convert_json_to_jsonstring, WrapperUMessage, WrapperUUri};
-use crate::{constants, utils, UTransportSocket};
+use crate::{constants, utils};
 use std::net::TcpStream;
 
 use self::utils::sanitize_input_string;
@@ -154,7 +154,7 @@ impl SocketTestAgent {
 
     async fn handle_send_command(
         &self,
-        utransport: &UTransportSocket,
+        utransport: &dyn UTransport,
         json_data_value: Value,
     ) -> Result<(), UStatus> {
         let wrapperu_message: WrapperUMessage = match serde_json::from_value(json_data_value) {
@@ -173,7 +173,7 @@ impl SocketTestAgent {
 
     async fn handle_register_listener_command(
         &self,
-        utransport: &UTransportSocket,
+        utransport: &dyn UTransport,
         json_data_value: Value,
     ) -> Result<(), UStatus> {
         let wrapper_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
@@ -197,7 +197,7 @@ impl SocketTestAgent {
 
     async fn handle_unregister_listener_command(
         &self,
-        utransport: &UTransportSocket,
+        utransport: &dyn UTransport,
         json_data_value: Value,
     ) -> Result<(), UStatus> {
         let wrapper_uuri: WrapperUUri = match serde_json::from_value(json_data_value) {
@@ -221,7 +221,7 @@ impl SocketTestAgent {
 
     pub async fn receive_from_tm(
         &mut self,
-        utransport: UTransportSocket,
+        utransport: &dyn UTransport,
         ta_to_tm_socket: TcpStream,
     ) {
         self.clone().inform_tm_ta_starting();
@@ -270,14 +270,14 @@ impl SocketTestAgent {
 
             let status = match json_str_ref {
                 constants::SEND_COMMAND => {
-                    self.handle_send_command(&utransport, json_data_value).await
+                    self.handle_send_command(utransport, json_data_value).await
                 }
                 constants::REGISTER_LISTENER_COMMAND => {
-                    self.handle_register_listener_command(&utransport, json_data_value)
+                    self.handle_register_listener_command(utransport, json_data_value)
                         .await
                 }
                 constants::UNREGISTER_LISTENER_COMMAND => {
-                    self.handle_unregister_listener_command(&utransport, json_data_value)
+                    self.handle_unregister_listener_command(utransport, json_data_value)
                         .await
                 }
                 _ => Ok(()),

@@ -73,6 +73,9 @@ def create_command(filepath_from_root_repo: str) -> List[str]:
             os.path.dirname(os.getcwd()) + "/" + filepath_from_root_repo
         )
     )
+    if "rust" in filepath_from_root_repo:
+        command.append("socket")
+
     return command
 
 
@@ -125,9 +128,9 @@ def before_all(context):
     process: subprocess.Popen = create_subprocess(command)
     context.python_ta_process = process
 
-    command = create_command(JAVA_TA_PATH)
-    process: subprocess.Popen = create_subprocess(command)
-    context.java_ta_process = process
+    # command = create_command(JAVA_TA_PATH)
+    # process: subprocess.Popen = create_subprocess(command)
+    # context.java_ta_process = process
 
     command = create_command(RUST_TA_PATH)
     process: subprocess.Popen = create_subprocess(command)
@@ -144,14 +147,14 @@ def after_all(context: Context):
     context.rust_sender = False
     context.tm.close_test_agent("rust")
     context.tm.close_test_agent("python")
-    context.tm.close_test_agent("java")
+   #context.tm.close_test_agent("java")
     context.tm.close()
     context.dispatcher.close()
 
     context.logger.info("Closed All Test Agents and Test Manager...")
 
     try:
-        context.java_ta_process.terminate()
+  #      context.java_ta_process.terminate()
         context.python_ta_process.terminate()
         context.rust_ta_process.terminate()
     except Exception as e:
