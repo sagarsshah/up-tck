@@ -52,7 +52,7 @@ sys.path.insert(0, repo.working_tree_dir)
 from dispatcher.dispatcher import Dispatcher
 
 
-def create_command(filepath_from_root_repo: str) -> List[str]:
+def create_command(context, filepath_from_root_repo: str) -> List[str]:
     command: List[str] = []
 
     if filepath_from_root_repo.endswith(".jar"):
@@ -72,6 +72,8 @@ def create_command(filepath_from_root_repo: str) -> List[str]:
             os.path.dirname(os.getcwd()) + "/" + filepath_from_root_repo
         )
     )
+
+    command.append(context.transport["transport"])
     return command
 
 
@@ -113,11 +115,11 @@ def create_sdk_data(context, sdk_name: str, command: str):
         context.logger.info(f"Creating {sdk_name} process...")
 
         if sdk_name == "python":
-            run_command = create_command(PYTHON_TA_PATH)
+            run_command = create_command(context, PYTHON_TA_PATH)
         elif sdk_name == "java":
-            run_command = create_command(JAVA_TA_PATH)
+            run_command = create_command(context, JAVA_TA_PATH)
         elif sdk_name == "rust":
-            run_command = create_command(RUST_TA_PATH)
+            run_command = create_command(context, RUST_TA_PATH)
 
         process = create_subprocess(run_command)
         if sdk_name in ["python", "java", "rust"]:
