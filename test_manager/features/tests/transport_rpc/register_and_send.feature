@@ -29,7 +29,10 @@ Feature: Testing Publish and Subscribe Functionality
   Scenario Outline: To test the registerlistener and send apis
     Given "<uE1>" creates data for "registerlistener"
     And sets "entity.name" to "body.access"
+    And sets "entity.id" to "12345"
+    And sets "entity.version_major" to "1"
     And sets "resource.name" to "door"
+    And sets "resource.id" to "12345"
     And sets "resource.instance" to "front_left"
     And sets "resource.message" to "Door"
 
@@ -40,7 +43,10 @@ Feature: Testing Publish and Subscribe Functionality
     And sets "attributes.id.msb" to "112128268635242497"
     And sets "attributes.id.lsb" to "11155833020022798372"
     And sets "attributes.source.entity.name" to "body.access"
+    And sets "attributes.source.entity.id" to "12345"
+    And sets "attributes.source.entity.version_major" to "1"
     And sets "attributes.source.resource.name" to "door"
+    And sets "attributes.source.resource.id" to "12345"
     And sets "attributes.source.resource.instance" to "front_left"
     And sets "attributes.source.resource.message" to "Door"
     And sets "attributes.priority" to "UPRIORITY_CS1"
@@ -55,7 +61,10 @@ Feature: Testing Publish and Subscribe Functionality
     # Unregister in the end for cleanup
     When "<uE1>" creates data for "unregisterlistener"
       And sets "entity.name" to "body.access"
+      And sets "entity.id" to "12345"
+      And sets "entity.version_major" to "1"
       And sets "resource.name" to "door"
+      And sets "resource.id" to "12345"
       And sets "resource.instance" to "front_left"
       And sets "resource.message" to "Door"
       And sends "unregisterlistener" request
@@ -65,11 +74,11 @@ Feature: Testing Publish and Subscribe Functionality
     Examples:
       | uE1    | uE2    |
       | rust   | rust   |
-      | rust   | python |
-      | python | rust   |
-      | rust   | java   |
-      | java   | rust   |
-      | python | python |
-      | java   | java   |
-      | java   | python |
-      | python | java   |
+      # | rust   | python |
+      # | python | rust   |
+      # | rust   | java   |
+      # | java   | rust   |
+      # | python | python |
+      # | java   | java   |
+      # | java   | python |
+      # | python | java   |

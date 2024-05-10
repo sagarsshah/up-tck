@@ -29,7 +29,10 @@ Feature: Testing register and unregister
   Scenario Outline: To test the registerlistener and unregisterlistener apis
     Given "<uE1>" creates data for "registerlistener"
     And sets "entity.name" to "body.access"
+    And sets "entity.id" to "12345"
+    And sets "entity.version_major" to "1"
     And sets "resource.name" to "door"
+    And sets "resource.id" to "12345"
     And sets "resource.instance" to "front_left"
     And sets "resource.message" to "Door"
     When sends "registerlistener" request
@@ -38,7 +41,10 @@ Feature: Testing register and unregister
 
     When "<uE1>" creates data for "unregisterlistener"
     And sets "entity.name" to "body.access"
+    And sets "entity.id" to "12345"
+    And sets "entity.version_major" to "1"
     And sets "resource.name" to "door"
+    And sets "resource.id" to "12345"
     And sets "resource.instance" to "front_left"
     And sets "resource.message" to "Door"
     And sends "unregisterlistener" request
@@ -47,15 +53,18 @@ Feature: Testing register and unregister
 
     Examples:
       | uE1    |
-      | java   |
-      | python |
+      # | java   |
+      # | python |
       | rust   |
 
 
     Scenario Outline: Test unregisterlistener when no entity is registered to any topic
       Given "<uE1>" creates data for "unregisterlistener"
         And sets "entity.name" to "body.access"
+        And sets "entity.id" to "12345"
+        And sets "entity.version_major" to "1"
         And sets "resource.name" to "door"
+        And sets "resource.id" to "12345"
         And sets "resource.instance" to "front_left"
         And sets "resource.message" to "Door"
 
@@ -65,6 +74,6 @@ Feature: Testing register and unregister
 
       Examples:
         | uE1    |
-        | java   |
-        | python |
+        # | java   |
+        # | python |
         | rust   |

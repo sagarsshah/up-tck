@@ -27,13 +27,15 @@ mod constants;
 mod utils;
 
 use crate::constants::TEST_MANAGER_ADDR;
-use up_rust::{Number, UAuthority, UEntity, UTransport};
 use testagent::{ListenerHandlers, SocketTestAgent};
+use up_rust::{Number, UAuthority, UEntity, UTransport};
 use utransport_socket::UTransportSocket;
 mod testagent;
 use log::error;
 use std::{env, net::TcpStream, sync::Arc, thread};
 use tokio::runtime::Runtime;
+use up_client_zenoh::UPClientZenoh;
+use zenoh::config::Config;
 
 fn connect_to_socket(addr: &str, port: u16) -> Result<TcpStream, Box<dyn std::error::Error>> {
     let socket_addr = format!("{addr}:{port}");
@@ -50,9 +52,6 @@ async fn connect_and_receive(transport_name: &String) -> Result<(), Box<dyn std:
     let test_agent = connect_to_socket(TEST_MANAGER_ADDR.0, TEST_MANAGER_ADDR.1)?;
     let ta_to_tm_socket = connect_to_socket(TEST_MANAGER_ADDR.0, TEST_MANAGER_ADDR.1)?;
     let foo_listener_socket_to_tm = connect_to_socket(TEST_MANAGER_ADDR.0, TEST_MANAGER_ADDR.1)?;
-
-    // let u_transport = UTransportSocket::new()?;
-    // dbg!("Socket transport created successfully");
 
     let u_transport: Box<dyn UTransport> = if "zenoh" == transport_name {
         let uauthority = UAuthority {
@@ -94,10 +93,6 @@ async fn connect_and_receive(transport_name: &String) -> Result<(), Box<dyn std:
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let handle = thread::spawn(|| {
-        // let rt = Runtime::new().expect("Error creating runtime");
-        // match rt.block_on(connect_and_receive()) {
-        //     Ok(()) => (),
-        //     Err(err) => eprintln!("Error occurred: {err}"),
         let args: Vec<String> = env::args().collect();
 
         if args.len() < 2 {

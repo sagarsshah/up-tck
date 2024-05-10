@@ -336,9 +336,9 @@ impl<'de> Deserialize<'de> for WrapperUAttribute {
 
         if let Some(commstatus_str) = value.get("commstatus").and_then(|v| v.as_str()) {
             if let Some(code) = UCode::from_str(commstatus_str) {
-              uattributes.commstatus = Some(code.into());
+                uattributes.commstatus = Some(code.into());
             } else {
-              error!("Failed to parse commstatus string into UCode.");
+                error!("Failed to parse commstatus string into UCode.");
             }
         } else {
             error!("Failed to extract commstatus as a string.");

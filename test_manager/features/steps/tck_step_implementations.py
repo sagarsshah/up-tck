@@ -108,6 +108,8 @@ def create_sdk_data(context, sdk_name: str, command: str):
             thread.start()
             context.dispatcher[context.transport["transport"]] = dispatcher
             time.sleep(5)
+        elif context.transport["transport"] == "zenoh":
+            context.logger.info("Zenoh selected as transport")
         else:
             raise ValueError("Invalid transport")
 

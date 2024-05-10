@@ -219,26 +219,20 @@ impl SocketTestAgent {
 
     pub async fn receive_from_tm(
         &mut self,
-        utransport: UTransportSocket,
+        utransport: &dyn UTransport,
         ta_to_tm_socket: TcpStream,
     ) {
         self.clone().inform_tm_ta_starting().await;
         let clientsocket = self.clientsocket.clone();
         let mut socket = clientsocket.lock().await;
 
-        loop {
-            let mut recv_data = [0; 2048];
-
-            let bytes_received = match socket.read(&mut recv_data) {
-                Ok(bytes_received) => bytes_received,
-                Err(e) => {
-                    dbg!("Socket error: {}", e);
-                    break;
-                }
-            };
-
+        let mut recv_data = [0; 2048];
+        // Use `while let` to handle reads
+        while let Ok(bytes_received) = socket.read(&mut recv_data) {
             if bytes_received == 0 {
-                continue;
+                // Handling the case when the connection is closed properly
+                dbg!("Connection closed by the peer.");
+                break;
             }
 
             let recv_data_str: std::borrow::Cow<'_, str> =
